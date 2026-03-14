@@ -1,0 +1,198 @@
+import {
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
+  Network,
+  RefreshCw,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import ConfigValidator from "./components/ConfigValidator";
+import CosmicBackground from "./components/CosmicBackground";
+import ParticleBackground from "./components/ParticleBackground";
+import ProfileSetup from "./components/ProfileSetup";
+import ReinitializationProgress from "./components/ReinitializationProgress";
+import { useActorReinitializer } from "./hooks/useActorReinitializer";
+import { useActorWithInit } from "./hooks/useActorWithInit";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { useGetCallerUserProfile } from "./hooks/useQueries";
+import Dashboard from "./pages/Dashboard";
+import LandingPage from "./pages/LandingPage";
+
+export default function App() {
+  const { identity, isInitializing: identityInitializing } =
+    useInternetIdentity();
+  const { isInitializing: actorInitializing, error: actorError } =
+    useActorWithInit();
+  const reinitializer = useActorReinitializer();
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    isFetched: profileFetched,
+  } = useGetCallerUserProfile();
+
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+
+  const isAuthenticated = !!identity;
+
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !profileLoading &&
+      profileFetched &&
+      userProfile === null
+    ) {
+      setShowProfileSetup(true);
+    } else {
+      setShowProfileSetup(false);
+    }
+  }, [isAuthenticated, profileLoading, profileFetched, userProfile]);
+
+  if (reinitializer.isReinitializing) {
+    return (
+      <>
+        <CosmicBackground />
+        <ParticleBackground />
+        <ReinitializationProgress
+          attempt={reinitializer.attempt}
+          maxAttempts={3}
+          currentGateway={reinitializer.currentGateway}
+        />
+      </>
+    );
+  }
+
+  if (identityInitializing || (isAuthenticated && actorInitializing)) {
+    return (
+      <>
+        <CosmicBackground />
+        <ParticleBackground />
+        <ConfigValidator />
+        <div className="min-h-screen flex items-center justify-center relative z-10 p-4">
+          <div className="text-center space-y-6 p-8 glassmorphism rounded-lg neon-border box-glow-cyan max-w-3xl animate-pulse-glow">
+            <Loader2 className="w-16 h-16 animate-spin text-[#00ffff] mx-auto drop-shadow-[0_0_15px_rgba(0,255,255,0.8)]" />
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold text-[#00ffff] tracking-wider font-orbitron text-glow-cyan">
+                ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ
+              </h2>
+              <p className="text-[#9933ff] text-sm tracking-wide font-jetbrains">
+                {identityInitializing
+                  ? "Загрузка аутентификации..."
+                  : "Подключение к блокчейну Internet Computer..."}
+              </p>
+              <div className="glassmorphism p-6 rounded neon-border mt-4">
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                  <Network className="w-6 h-6 text-[#00ffff]" />
+                  <h3 className="text-[#00ffff] font-bold text-base font-orbitron text-glow-cyan">
+                    МАКСИМАЛЬНАЯ СТАБИЛЬНОСТЬ
+                  </h3>
+                </div>
+                <div className="space-y-2 text-xs font-mono text-left font-jetbrains">
+                  {(
+                    [
+                      ["Таймаут", "120 секунд (максимально рекомендуемый)"],
+                      [
+                        "Попытки повтора",
+                        "25 попыток с экспоненциальной задержкой (1с → 45с)",
+                      ],
+                      [
+                        "Основной шлюз",
+                        "https://ic0.app (официальный DFINITY)",
+                      ],
+                      [
+                        "Резервные шлюзы",
+                        "boundary.ic0.app, icp-api.io (автоматическое переключение)",
+                      ],
+                      [
+                        "Опрос данных",
+                        "25 попыток с 4 проверками работоспособности",
+                      ],
+                      [
+                        "Синхронизация",
+                        "Полная синхронизация конфигурации фронтенда/бэкенда",
+                      ],
+                    ] as [string, string][]
+                  ).map(([label, value]) => (
+                    <div key={label} className="flex items-start space-x-2">
+                      <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                      <p className="text-[#00ff41]/90">
+                        <span className="text-[#00ffff] font-bold">
+                          {label}:
+                        </span>{" "}
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="glassmorphism p-4 rounded border border-[#9933ff]/30 mt-4">
+                <p className="text-[#9933ff]/90 text-xs leading-relaxed font-jetbrains">
+                  Установка стабильного соединения с автоматическим
+                  переключением шлюзов...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (isAuthenticated && actorError) {
+    return (
+      <>
+        <CosmicBackground />
+        <ParticleBackground />
+        <ConfigValidator />
+        <div className="min-h-screen flex items-center justify-center relative z-10 p-4">
+          <div className="max-w-3xl mx-auto p-8 glassmorphism rounded-lg neon-border box-glow-gold">
+            <div className="flex items-start space-x-4">
+              <AlertTriangle className="w-12 h-12 text-red-500 flex-shrink-0 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-red-500 mb-4 tracking-wider font-orbitron">
+                  ОШИБКА ПОДКЛЮЧЕНИЯ
+                </h2>
+                <p className="text-red-300 mb-4 leading-relaxed font-jetbrains">
+                  Не удалось установить стабильное соединение.
+                </p>
+                <div className="glassmorphism border border-red-500/30 rounded p-4 mb-6">
+                  <p className="text-red-300 text-xs font-mono break-all font-jetbrains">
+                    <strong>Детали ошибки:</strong> {String(actorError)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full px-6 py-3 btn-gradient-cyan text-black font-bold rounded-lg font-orbitron flex items-center justify-center space-x-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  <span>Повторить подключение</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <CosmicBackground />
+        <ParticleBackground />
+        <ConfigValidator />
+        <LandingPage />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <CosmicBackground />
+      <ParticleBackground />
+      <ConfigValidator />
+      {showProfileSetup && <ProfileSetup />}
+      {!showProfileSetup && <Dashboard />}
+    </>
+  );
+}
