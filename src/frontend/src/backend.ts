@@ -89,10 +89,143 @@ export class ExternalBlob {
         return this;
     }
 }
+
+export interface Coordinates {
+    lat: number;
+    lon: number;
+}
+
+export interface ModifierInstance {
+    modifierInstanceId: bigint;
+    modifierType: string;
+    model_url: string;
+    rarity_tier: bigint;
+    multiplier_value: number;
+}
+
+export interface Modification {
+    model_url: string;
+    mod_id: bigint;
+    rarity_tier: bigint;
+    multiplier_value: number;
+}
+
+export interface LandData {
+    landId: bigint;
+    principal: Principal;
+    biome: string;
+    plotName: string;
+    decorationURL: string | null | [];
+    coordinates: Coordinates;
+    cycleCharge: bigint;
+    chargeCap: bigint;
+    upgradeLevel: bigint;
+    baseTokenMultiplier: number;
+    lastClaimTime: bigint;
+    lastChargeUpdate: bigint;
+    attachedModifications: ModifierInstance[];
+}
+
+export interface LootCache {
+    cache_id: bigint;
+    owner: Principal;
+    tier: bigint;
+    discovered_at: bigint;
+    is_opened: boolean;
+}
+
+export type DiscoverCacheResult =
+    | { __kind__: "success"; success: LootCache }
+    | { __kind__: "insufficientTokens"; insufficientTokens: { required: bigint; current: bigint } }
+    | { __kind__: "paymentFailed"; paymentFailed: string }
+    | { __kind__: "insufficientCharge"; insufficientCharge: { required: bigint; current: bigint } };
+
+export type ClaimResult =
+    | { __kind__: "success"; success: { tokensClaimed: bigint; newBalance: bigint; nextClaimTime: bigint } }
+    | { __kind__: "mintFailed"; mintFailed: string }
+    | { __kind__: "cooldown"; cooldown: { currentBalance: bigint; remainingTime: bigint } }
+    | { __kind__: "insufficientCharge"; insufficientCharge: { required: bigint; current: bigint } };
+
+export type UpgradeResult =
+    | { __kind__: "maxLevelReached" }
+    | { __kind__: "success"; success: { newLevel: bigint; remainingTokens: bigint } }
+    | { __kind__: "insufficientTokens"; insufficientTokens: { required: bigint; current: bigint } };
+
+export interface UserProfile {
+    name: string;
+}
+
+export type Time = bigint;
+
+export interface TopLandEntry {
+    upgradeLevel: bigint;
+    principal: Principal;
+    tokenBalance: bigint;
+    plotName: string;
+}
+
 export interface backendInterface {
+    getLandData(): Promise<LandData[]>;
+    getLandDataQuery(): Promise<LandData[]>;
+    getUserProfile(principal: Principal): Promise<Option<UserProfile>>;
+    getCallerUserProfile(): Promise<Option<UserProfile>>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    getCallerUserRole(): Promise<string>;
+    isCallerAdmin(): Promise<boolean>;
+    initializeAccessControl(): Promise<void>;
+    claimRewards(landId: bigint): Promise<ClaimResult>;
+    upgradePlot(landId: bigint, cost: bigint): Promise<UpgradeResult>;
+    updatePlotName(landId: bigint, name: string): Promise<void>;
+    updateDecoration(landId: bigint, url: string): Promise<void>;
+    applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void>;
+    mintLand(): Promise<unknown>;
+    getTopLands(limit: bigint): Promise<TopLandEntry[]>;
+    getMyModifications(): Promise<Modification[]>;
+    getMyModifierInventory(): Promise<ModifierInstance[]>;
+    getMyLootCaches(): Promise<LootCache[]>;
+    discoverLootCache(tier: bigint): Promise<DiscoverCacheResult>;
+    processCache(cacheId: bigint): Promise<ModifierInstance>;
+    getTokenBalance(): Promise<bigint>;
+    getCanisterTokenBalance(): Promise<bigint>;
+    debugTokenBalance(): Promise<void>;
+    debugCanisterBalance(): Promise<void>;
+    getStakedBalance(): Promise<bigint>;
+    stakeTokens(amount: bigint): Promise<unknown>;
+    getAllActiveProposals(): Promise<unknown[]>;
+    createProposal(args: { title: string; description: string }): Promise<bigint>;
+    vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
+    async getLandData(): Promise<LandData[]> { return []; }
+    async getLandDataQuery(): Promise<LandData[]> { return []; }
+    async getUserProfile(_principal: Principal): Promise<Option<UserProfile>> { return { __kind__: "None" }; }
+    async getCallerUserProfile(): Promise<Option<UserProfile>> { return { __kind__: "None" }; }
+    async saveCallerUserProfile(_profile: UserProfile): Promise<void> {}
+    async getCallerUserRole(): Promise<string> { return "user"; }
+    async isCallerAdmin(): Promise<boolean> { return false; }
+    async initializeAccessControl(): Promise<void> {}
+    async claimRewards(_landId: bigint): Promise<ClaimResult> { return { __kind__: "mintFailed", mintFailed: "stub" }; }
+    async upgradePlot(_landId: bigint, _cost: bigint): Promise<UpgradeResult> { return { __kind__: "maxLevelReached" }; }
+    async updatePlotName(_landId: bigint, _name: string): Promise<void> {}
+    async updateDecoration(_landId: bigint, _url: string): Promise<void> {}
+    async applyModifier(_modifierInstanceId: bigint, _landId: bigint): Promise<void> {}
+    async mintLand(): Promise<unknown> { return null; }
+    async getTopLands(_limit: bigint): Promise<TopLandEntry[]> { return []; }
+    async getMyModifications(): Promise<Modification[]> { return []; }
+    async getMyModifierInventory(): Promise<ModifierInstance[]> { return []; }
+    async getMyLootCaches(): Promise<LootCache[]> { return []; }
+    async discoverLootCache(_tier: bigint): Promise<DiscoverCacheResult> { return { __kind__: "paymentFailed", paymentFailed: "stub" }; }
+    async processCache(_cacheId: bigint): Promise<ModifierInstance> { return { modifierInstanceId: 0n, modifierType: "", model_url: "", rarity_tier: 0n, multiplier_value: 1 }; }
+    async getTokenBalance(): Promise<bigint> { return 0n; }
+    async getCanisterTokenBalance(): Promise<bigint> { return 0n; }
+    async debugTokenBalance(): Promise<void> {}
+    async debugCanisterBalance(): Promise<void> {}
+    async getStakedBalance(): Promise<bigint> { return 0n; }
+    async stakeTokens(_amount: bigint): Promise<unknown> { return null; }
+    async getAllActiveProposals(): Promise<unknown[]> { return []; }
+    async createProposal(_args: { title: string; description: string }): Promise<bigint> { return 0n; }
+    async vote(_args: { proposalId: bigint; choice: boolean }): Promise<unknown> { return null; }
 }
 export interface CreateActorOptions {
     agent?: Agent;

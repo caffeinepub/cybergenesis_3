@@ -21,8 +21,11 @@ import LandingPage from "./pages/LandingPage";
 export default function App() {
   const { identity, isInitializing: identityInitializing } =
     useInternetIdentity();
-  const { isInitializing: actorInitializing, error: actorError } =
-    useActorWithInit();
+  const {
+    isInitialized: _actorInitialized,
+    isInitializing: actorInitializing,
+    error: actorError,
+  } = useActorWithInit();
   const reinitializer = useActorReinitializer();
   const {
     data: userProfile,
@@ -31,8 +34,15 @@ export default function App() {
   } = useGetCallerUserProfile();
 
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [_isAppMounted, setIsAppMounted] = useState(false);
 
   const isAuthenticated = !!identity;
+
+  useEffect(() => {
+    if (!identityInitializing && !actorInitializing) {
+      setIsAppMounted(true);
+    }
+  }, [identityInitializing, actorInitializing]);
 
   useEffect(() => {
     if (
@@ -79,6 +89,7 @@ export default function App() {
                   ? "Загрузка аутентификации..."
                   : "Подключение к блокчейну Internet Computer..."}
               </p>
+
               <div className="glassmorphism p-6 rounded neon-border mt-4">
                 <div className="flex items-center justify-center space-x-2 mb-4">
                   <Network className="w-6 h-6 text-[#00ffff]" />
@@ -87,47 +98,66 @@ export default function App() {
                   </h3>
                 </div>
                 <div className="space-y-2 text-xs font-mono text-left font-jetbrains">
-                  {(
-                    [
-                      ["Таймаут", "120 секунд (максимально рекомендуемый)"],
-                      [
-                        "Попытки повтора",
-                        "25 попыток с экспоненциальной задержкой (1с → 45с)",
-                      ],
-                      [
-                        "Основной шлюз",
-                        "https://ic0.app (официальный DFINITY)",
-                      ],
-                      [
-                        "Резервные шлюзы",
-                        "boundary.ic0.app, icp-api.io (автоматическое переключение)",
-                      ],
-                      [
-                        "Опрос данных",
-                        "25 попыток с 4 проверками работоспособности",
-                      ],
-                      [
-                        "Синхронизация",
-                        "Полная синхронизация конфигурации фронтенда/бэкенда",
-                      ],
-                    ] as [string, string][]
-                  ).map(([label, value]) => (
-                    <div key={label} className="flex items-start space-x-2">
-                      <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                      <p className="text-[#00ff41]/90">
-                        <span className="text-[#00ffff] font-bold">
-                          {label}:
-                        </span>{" "}
-                        {value}
-                      </p>
-                    </div>
-                  ))}
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">Таймаут:</span>{" "}
+                      120 секунд (максимально рекомендуемый)
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">
+                        Попытки повтора:
+                      </span>{" "}
+                      25 попыток с экспоненциальной задержкой (1с → 45с)
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">
+                        Основной шлюз:
+                      </span>{" "}
+                      https://ic0.app (официальный DFINITY)
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">
+                        Резервные шлюзы:
+                      </span>{" "}
+                      boundary.ic0.app, icp-api.io (автоматическое переключение)
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">
+                        Опрос данных:
+                      </span>{" "}
+                      25 попыток с 4 проверками работоспособности
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
+                    <p className="text-[#00ff41]/90">
+                      <span className="text-[#00ffff] font-bold">
+                        Синхронизация:
+                      </span>{" "}
+                      Полная синхронизация конфигурации фронтенда/бэкенда
+                    </p>
+                  </div>
                 </div>
               </div>
+
               <div className="glassmorphism p-4 rounded border border-[#9933ff]/30 mt-4">
                 <p className="text-[#9933ff]/90 text-xs leading-relaxed font-jetbrains">
                   Установка стабильного соединения с автоматическим
-                  переключением шлюзов...
+                  переключением шлюзов и комплексными проверками подключения ко
+                  всем пяти канистрам...
                 </p>
               </div>
             </div>
@@ -152,13 +182,107 @@ export default function App() {
                   ОШИБКА ПОДКЛЮЧЕНИЯ
                 </h2>
                 <p className="text-red-300 mb-4 leading-relaxed font-jetbrains">
-                  Не удалось установить стабильное соединение.
+                  Не удалось установить стабильное соединение с сетью Internet
+                  Computer после множественных попыток повтора с таймаутом 120
+                  секунд, экспоненциальной задержкой (25 попыток) и
+                  автоматическим переключением шлюзов.
                 </p>
-                <div className="glassmorphism border border-red-500/30 rounded p-4 mb-6">
+
+                <div className="glassmorphism border border-red-500/30 rounded p-4 mb-4">
                   <p className="text-red-300 text-xs font-mono break-all font-jetbrains">
                     <strong>Детали ошибки:</strong> {String(actorError)}
                   </p>
                 </div>
+
+                <div className="space-y-3 mb-6">
+                  <h3 className="text-red-100 font-bold text-sm font-orbitron">
+                    ШАГИ ПО УСТРАНЕНИЮ НЕПОЛАДОК:
+                  </h3>
+                  <ul className="list-disc list-inside space-y-2 text-red-200 text-sm font-jetbrains">
+                    <li>Проверьте стабильность вашего интернет-соединения</li>
+                    <li>
+                      Убедитесь, что VITE_DFX_NETWORK установлен на "ic" в файле
+                      .env
+                    </li>
+                    <li>
+                      Подтвердите правильность настройки всех ID канистр:
+                      <ul className="list-circle list-inside ml-6 mt-1 space-y-1 text-xs">
+                        <li>
+                          VITE_LAND_CANISTER_ID (br5f7-7uaaa-aaaaa-qaaca-cai)
+                        </li>
+                        <li>
+                          VITE_ASSET_CANISTER_ID (bd3sg-teaaa-aaaaa-qaaba-cai)
+                        </li>
+                        <li>
+                          VITE_CYBER_TOKEN_CANISTER_ID
+                          (w4q3i-7yaaa-aaaam-ab3oq-cai)
+                        </li>
+                        <li>
+                          VITE_MARKETPLACE_CANISTER_ID
+                          (be2us-64aaa-aaaaa-qaabq-cai)
+                        </li>
+                        <li>
+                          VITE_GOVERNANCE_CANISTER_ID
+                          (bkyz2-fmaaa-aaaaa-qaaaq-cai)
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      Убедитесь, что канистры развернуты и работают в основной
+                      сети IC
+                    </li>
+                    <li>
+                      Попробуйте очистить кэш браузера и перезагрузить страницу
+                    </li>
+                    <li>
+                      Проверьте доступность шлюзов: ic0.app, boundary.ic0.app,
+                      icp-api.io
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="glassmorphism p-4 rounded border border-red-500/30 mb-4">
+                  <h3 className="text-red-100 font-bold mb-2 text-sm font-orbitron">
+                    КОНФИГУРАЦИЯ СЕТИ:
+                  </h3>
+                  <div className="space-y-1 text-xs font-mono font-jetbrains">
+                    <p className="text-red-200">
+                      Сеть:{" "}
+                      <span className="text-[#00ffff]">
+                        {import.meta.env.VITE_DFX_NETWORK || "НЕ УСТАНОВЛЕНО"}
+                      </span>
+                    </p>
+                    <p className="text-red-200">
+                      Основной шлюз:{" "}
+                      <span className="text-[#00ffff]">
+                        https://ic0.app (официальный DFINITY)
+                      </span>
+                    </p>
+                    <p className="text-red-200">
+                      Резервные шлюзы:{" "}
+                      <span className="text-[#00ffff]">
+                        boundary.ic0.app, icp-api.io
+                      </span>
+                    </p>
+                    <p className="text-red-200">
+                      Таймаут:{" "}
+                      <span className="text-[#00ffff]">120 секунд</span>
+                    </p>
+                    <p className="text-red-200">
+                      Логика повтора:{" "}
+                      <span className="text-[#00ffff]">
+                        25 попыток с экспоненциальной задержкой
+                      </span>
+                    </p>
+                    <p className="text-red-200">
+                      Опрос данных:{" "}
+                      <span className="text-[#00ffff]">
+                        25 попыток с 4 проверками работоспособности
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => window.location.reload()}

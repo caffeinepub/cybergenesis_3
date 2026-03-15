@@ -25,6 +25,7 @@ export function useActor() {
       };
 
       const actor = await createActorWithConfig(actorOptions);
+      await actor.initializeAccessControl();
       return actor;
     },
     // Only refetch when identity changes

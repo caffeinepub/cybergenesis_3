@@ -7,7 +7,8 @@ import {
   Trophy,
   Vote,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import type { LandData } from "../backend";
 import CubeVisualization from "../components/CubeVisualization";
 import Discovery from "../components/Discovery";
 import Governance from "../components/Governance";
@@ -17,7 +18,6 @@ import Leaderboard from "../components/Leaderboard";
 import MapView from "../components/MapView";
 import Marketplace from "../components/Marketplace";
 import { useActor } from "../hooks/useActor";
-import type { LandData } from "../types/land";
 import Collection from "./Collection";
 
 type TabType =
@@ -38,8 +38,7 @@ export default function Dashboard() {
     queryKey: ["landData"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not initialized");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (actor as any).getLandData();
+      return actor.getLandData();
     },
     enabled: !!actor,
   });
@@ -47,6 +46,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (lands && lands.length > 0 && selectedLandIndex >= lands.length) {
       setSelectedLandIndex(0);
+    }
+  }, [lands, selectedLandIndex]);
+
+  useEffect(() => {
+    if (lands && lands.length > 0) {
+      const currentLand = lands[selectedLandIndex];
+      console.log("[Dashboard] 🌍 Current Land Data:", {
+        index: selectedLandIndex,
+        biome: currentLand.biome,
+        landId: currentLand.landId,
+        coordinates: currentLand.coordinates,
+      });
     }
   }, [lands, selectedLandIndex]);
 
@@ -90,13 +101,16 @@ export default function Dashboard() {
     { id: "map" as TabType, icon: MapIcon, label: "Карта" },
   ];
 
+  const handleMapClose = () => {
+    setActiveTab("land");
+  };
+
   const isMapOpen = activeTab === "map";
 
   return (
     <div className="dashboard-container flex flex-col min-h-screen bg-transparent">
-      {isMapOpen && (
-        <MapView landData={currentLand} onClose={() => setActiveTab("land")} />
-      )}
+      {isMapOpen && <MapView landData={currentLand} onClose={handleMapClose} />}
+
       <div className="dashboard min-h-screen text-white relative overflow-hidden">
         <div className="relative z-10 container mx-auto px-4 py-8">
           {lands.length > 1 && (
@@ -108,6 +122,7 @@ export default function Dashboard() {
               />
             </div>
           )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div
               className="lg:col-span-2 rounded-lg overflow-hidden glassmorphism neon-border box-glow-cyan animate-pulse-glow"
@@ -120,6 +135,7 @@ export default function Dashboard() {
             >
               <CubeVisualization biome={currentLand.biome} />
             </div>
+
             <div className="space-y-4">
               <nav className="grid grid-cols-2 gap-2">
                 {tabs.map((tab) => {
@@ -128,13 +144,16 @@ export default function Dashboard() {
                     <button
                       type="button"
                       key={tab.id}
-                      data-ocid={`dashboard.${tab.id}.tab`}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all duration-300 font-medium font-orbitron ${
-                        activeTab === tab.id
-                          ? "glassmorphism neon-border text-[#00ffff] box-glow-cyan text-glow-cyan"
-                          : "glassmorphism border border-[#9933ff]/30 text-[#9933ff] hover:border-[#00ffff]/50 hover:text-[#00ffff] hover:box-glow-cyan"
-                      }`}
+                      className={`
+                        flex items-center justify-center gap-2 px-4 py-3 rounded-lg
+                        transition-all duration-300 font-medium font-orbitron
+                        ${
+                          activeTab === tab.id
+                            ? "glassmorphism neon-border text-[#00ffff] box-glow-cyan text-glow-cyan"
+                            : "glassmorphism border border-[#9933ff]/30 text-[#9933ff] hover:border-[#00ffff]/50 hover:text-[#00ffff] hover:box-glow-cyan"
+                        }
+                      `}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="text-sm">{tab.label}</span>
@@ -144,6 +163,7 @@ export default function Dashboard() {
               </nav>
             </div>
           </div>
+
           <div className="rounded-lg glassmorphism neon-border box-glow-purple p-6">
             {activeTab === "land" && (
               <LandDashboard selectedLandIndex={selectedLandIndex} />

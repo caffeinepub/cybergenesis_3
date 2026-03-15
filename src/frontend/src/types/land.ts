@@ -1,8 +1,17 @@
+import type { Principal } from "@icp-sdk/core/principal";
+
 export interface LandData {
-  landId: string;
-  biome: string | Record<string, unknown>;
-  coordinates: { x: number; y: number };
-  energyLevel: number | bigint;
-  level: number | bigint;
-  attachedModifications?: unknown[];
+  landId: bigint;
+  principal: Principal;
+  biome: string;
+  plotName: string;
+  decorationURL: string | null | [];
+  coordinates: { lat: number; lon: number };
+  cycleCharge: bigint;
+  chargeCap: bigint;
+  upgradeLevel: bigint;
+  baseTokenMultiplier: number;
+  lastClaimTime: bigint;
+  lastChargeUpdate: bigint;
+  attachedModifications: unknown[];
 }

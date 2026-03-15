@@ -13,10 +13,10 @@ export default function LandingPage() {
       debugLog("Initiating login process");
       setLoginError(null);
       await login();
-    } catch (error: unknown) {
-      const err = error as Error;
-      debugError("Login error", err);
-      if (err.message === "User is already authenticated") {
+    } catch (error: any) {
+      debugError("Login error", error);
+      console.error("Login failed:", error);
+      if (error.message === "User is already authenticated") {
         setLoginError("Вы уже вошли через Internet Identity");
       } else {
         setLoginError("Ошибка входа. Пожалуйста, попробуйте снова.");
@@ -29,33 +29,43 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-black">
       <CosmicBackground />
+
       <div className="absolute inset-0 z-[1]">
         <ParticleBackground />
       </div>
+
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-8">
         <div className="w-full max-w-4xl mx-auto text-center space-y-8">
           <div className="space-y-6 glassmorphism p-8 rounded-lg neon-border box-glow-cyan animate-slide-down">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-cyan-400 to-purple-500 animate-pulse font-orbitron">
               ПОЛУЧИТЕ СВОЙ УЧАСТОК ГЕНЕЗИСА
             </h1>
+
             <p className="text-xl md:text-2xl text-cyan-300 max-w-2xl mx-auto font-jetbrains text-glow-cyan">
               Создайте уникальную виртуальную землю в киберпространстве
             </p>
+
             <div className="pt-4">
               <button
                 type="button"
-                data-ocid="landing.primary_button"
                 onClick={handleLogin}
                 disabled={isLoggingIn}
-                className={`px-8 py-4 text-lg font-bold rounded-lg btn-gradient-green text-black shadow-[0_0_20px_rgba(0,255,65,0.5)] transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-orbitron ${
-                  isLoggingIn ? "animate-pulse" : ""
-                }`}
+                className={`
+                  px-8 py-4 text-lg font-bold rounded-lg
+                  btn-gradient-green
+                  text-black shadow-[0_0_20px_rgba(0,255,65,0.5)]
+                  transition-all duration-300 transform hover:scale-105
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  font-orbitron
+                  ${isLoggingIn ? "animate-pulse" : ""}
+                `}
               >
                 {isLoggingIn
                   ? "Подключение..."
                   : "Подключить Internet Identity"}
               </button>
             </div>
+
             {isLoggingIn && (
               <div className="flex items-center justify-center space-x-2 pt-4">
                 <div
@@ -72,6 +82,7 @@ export default function LandingPage() {
                 />
               </div>
             )}
+
             {loginError && (
               <div className="glassmorphism px-4 py-2 rounded-lg border border-red-500/50 box-glow-gold">
                 <p className="text-red-400 text-sm font-jetbrains">
@@ -80,12 +91,14 @@ export default function LandingPage() {
               </div>
             )}
           </div>
+
           <div className="glassmorphism p-6 rounded-lg neon-border box-glow-purple animate-slide-up">
             <p className="text-cyan-200 text-sm md:text-base font-jetbrains">
               Войдите через Internet Identity для доступа к вашей виртуальной
               земле
             </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
             <div className="glassmorphism p-4 rounded-lg border border-cyan-500/30 box-glow-cyan">
               <div className="text-3xl mb-2">🌌</div>
