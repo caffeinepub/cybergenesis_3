@@ -7,13 +7,23 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 interface LandModelProps {
   modelUrl: string;
   biome?: string;
+  debugEmissive?: number;
 }
 
-export default function LandModel({ modelUrl, biome }: LandModelProps) {
+export default function LandModel({
+  modelUrl,
+  biome,
+  debugEmissive,
+}: LandModelProps) {
   const { gl, camera } = useThree();
   const fittedRef = useRef(false);
   const isInitialized = useRef(false);
   const group = useRef<THREE.Group>(null);
+  const debugEmissiveRef = useRef<number | undefined>(debugEmissive);
+
+  useEffect(() => {
+    debugEmissiveRef.current = debugEmissive;
+  }, [debugEmissive]);
 
   const ktx2Loader = useMemo(() => {
     const loader = new KTX2Loader();
@@ -132,7 +142,8 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
             m.emissiveMap ||
             (m.emissive && !m.emissive.equals(new THREE.Color(0x000000)))
           ) {
-            const baseIntensity: number = m.userData.baseEmissive ?? 1.0;
+            const baseIntensity: number =
+              debugEmissiveRef.current ?? m.userData.baseEmissive ?? 1.0;
             m.emissiveIntensity =
               baseIntensity *
               (1.0 + Math.sin(state.clock.elapsedTime * 0.8) * 0.15);

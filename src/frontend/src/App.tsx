@@ -21,11 +21,8 @@ import LandingPage from "./pages/LandingPage";
 export default function App() {
   const { identity, isInitializing: identityInitializing } =
     useInternetIdentity();
-  const {
-    isInitialized: _actorInitialized,
-    isInitializing: actorInitializing,
-    error: actorError,
-  } = useActorWithInit();
+  const { isInitializing: actorInitializing, error: actorError } =
+    useActorWithInit();
   const reinitializer = useActorReinitializer();
   const {
     data: userProfile,
@@ -34,15 +31,8 @@ export default function App() {
   } = useGetCallerUserProfile();
 
   const [showProfileSetup, setShowProfileSetup] = useState(false);
-  const [_isAppMounted, setIsAppMounted] = useState(false);
 
   const isAuthenticated = !!identity;
-
-  useEffect(() => {
-    if (!identityInitializing && !actorInitializing) {
-      setIsAppMounted(true);
-    }
-  }, [identityInitializing, actorInitializing]);
 
   useEffect(() => {
     if (

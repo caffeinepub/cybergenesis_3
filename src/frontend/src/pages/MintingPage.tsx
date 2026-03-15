@@ -1,13 +1,11 @@
 import { Loader2 } from "lucide-react";
 import React from "react";
 import { useActor } from "../hooks/useActor";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetLandData } from "../hooks/useQueries";
 
 export default function MintingPage() {
-  const { identity: _identity } = useInternetIdentity();
-  const { actor: _actor, isFetching: actorFetching } = useActor();
-  const { data: _landData, isLoading: landLoading } = useGetLandData();
+  const { isFetching: actorFetching } = useActor();
+  const { isLoading: landLoading } = useGetLandData();
 
   if (actorFetching || landLoading) {
     return (

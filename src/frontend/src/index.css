@@ -288,26 +288,44 @@
   animation: float 3s ease-in-out infinite;
 }
 
-/* Scrollbar styling with cyberpunk theme */
+/* Premium smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Slim cyberpunk scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(10, 0, 30, 0.5);
-  border-radius: 5px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #00ffff 0%, #9933ff 100%);
-  border-radius: 5px;
-  border: 2px solid rgba(10, 0, 30, 0.5);
+  background: linear-gradient(180deg, #00ffff 0%, #9933ff 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #00ffff 0%, #aa44ff 100%);
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  background: linear-gradient(180deg, #00ffff 0%, #cc55ff 100%);
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.7), 0 0 20px rgba(153, 51, 255, 0.4);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9933ff transparent;
 }
 
 /* Cosmic background overlay */

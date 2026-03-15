@@ -6,8 +6,46 @@
         <meta http-equiv="Pragma" content="no-cache" />
         <meta http-equiv="Expires" content="0" />
         <title>CyberGenesis Land Mint DApp</title>
-      <script type="module" crossorigin src="/assets/index-DJrTmiAp.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-BDVG5GWQ.css">
+        <script>
+          (function () {
+            var currentY = window.scrollY;
+            var targetY = window.scrollY;
+            var rafId = null;
+
+            function lerp(a, b, t) { return a + (b - a) * t; }
+
+            function tick() {
+              currentY = lerp(currentY, targetY, 0.072);
+              var diff = Math.abs(currentY - targetY);
+              if (diff > 0.4) {
+                window.scrollTo(0, currentY);
+                rafId = requestAnimationFrame(tick);
+              } else {
+                window.scrollTo(0, targetY);
+                rafId = null;
+              }
+            }
+
+            document.addEventListener('wheel', function (e) {
+              var el = e.target;
+              if (!el) return;
+              // Skip canvas, Leaflet, Three.js orbit, and scrollable inner containers
+              if (
+                el.tagName === 'CANVAS' ||
+                el.closest('.leaflet-container') ||
+                el.closest('[data-smooth-skip]')
+              ) return;
+              // Only intercept if the page itself is scrollable
+              var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+              if (maxScroll <= 0) return;
+              e.preventDefault();
+              targetY = Math.max(0, Math.min(maxScroll, targetY + e.deltaY * 1.15));
+              if (!rafId) rafId = requestAnimationFrame(tick);
+            }, { passive: false });
+          })();
+        </script>
+      <script type="module" crossorigin src="/assets/index-U4Xs_d7M.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-CmR2a36h.css">
     </head>
     <body>
         <div id='root'></div>

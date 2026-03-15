@@ -7,68 +7,6 @@ import {
 } from "../data/modifierCatalog";
 
 export default function Collection() {
-  const _getTierName = (tier: number): string => {
-    switch (tier) {
-      case 1:
-        return "COMMON";
-      case 2:
-        return "RARE";
-      case 3:
-        return "LEGENDARY";
-      case 4:
-        return "MYTHIC";
-      default:
-        return "UNKNOWN";
-    }
-  };
-
-  const _getTierColor = (tier: number): string => {
-    switch (tier) {
-      case 1:
-        return "text-gray-400";
-      case 2:
-        return "text-blue-400";
-      case 3:
-        return "text-purple-400";
-      case 4:
-        return "text-yellow-400";
-      default:
-        return "text-primary";
-    }
-  };
-
-  const _getTierBorderClass = (tier: number): string => {
-    switch (tier) {
-      case 1:
-        return "border-gray-500/30 hover:border-gray-400/50";
-      case 2:
-        return "border-blue-500/30 hover:border-blue-400/50 box-glow-blue";
-      case 3:
-        return "border-purple-500/30 hover:border-purple-400/50 box-glow-purple";
-      case 4:
-        return "border-yellow-500/30 hover:border-yellow-400/50 box-glow-gold";
-      default:
-        return "border-primary/30";
-    }
-  };
-
-  const _getTierBadgeVariant = (
-    tier: number,
-  ): "default" | "secondary" | "outline" | "destructive" => {
-    switch (tier) {
-      case 1:
-        return "outline";
-      case 2:
-        return "secondary";
-      case 3:
-        return "default";
-      case 4:
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
   const tierCounts = PLANNED_MODIFIER_CATALOG.reduce(
     (acc, mod) => {
       acc[mod.rarity_tier] = (acc[mod.rarity_tier] || 0) + 1;

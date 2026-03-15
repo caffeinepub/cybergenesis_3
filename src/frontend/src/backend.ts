@@ -195,29 +195,106 @@ export interface backendInterface {
     createProposal(args: { title: string; description: string }): Promise<bigint>;
     vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
 }
+
+function fromCandidOpt<T>(opt: [] | [T]): Option<T> {
+    if (opt.length === 0) return { __kind__: "None" };
+    return { __kind__: "Some", value: opt[0] };
+}
+
+function fromCandidVariant(v: Record<string, any>): any {
+    const key = Object.keys(v)[0];
+    const value = v[key];
+    if (value === null || value === undefined || (typeof value === 'object' && Object.keys(value).length === 0)) {
+        return { __kind__: key };
+    }
+    return { __kind__: key, [key]: value };
+}
+
+function convertLandData(land: any): LandData {
+    return {
+        ...land,
+        decorationURL: land.decorationURL.length > 0 ? land.decorationURL[0] : null,
+    };
+}
+
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
-    async getLandData(): Promise<LandData[]> { return []; }
-    async getLandDataQuery(): Promise<LandData[]> { return []; }
-    async getUserProfile(_principal: Principal): Promise<Option<UserProfile>> { return { __kind__: "None" }; }
-    async getCallerUserProfile(): Promise<Option<UserProfile>> { return { __kind__: "None" }; }
-    async saveCallerUserProfile(_profile: UserProfile): Promise<void> {}
-    async getCallerUserRole(): Promise<string> { return "user"; }
-    async isCallerAdmin(): Promise<boolean> { return false; }
-    async initializeAccessControl(): Promise<void> {}
-    async claimRewards(_landId: bigint): Promise<ClaimResult> { return { __kind__: "mintFailed", mintFailed: "stub" }; }
-    async upgradePlot(_landId: bigint, _cost: bigint): Promise<UpgradeResult> { return { __kind__: "maxLevelReached" }; }
-    async updatePlotName(_landId: bigint, _name: string): Promise<void> {}
-    async updateDecoration(_landId: bigint, _url: string): Promise<void> {}
-    async applyModifier(_modifierInstanceId: bigint, _landId: bigint): Promise<void> {}
-    async mintLand(): Promise<unknown> { return null; }
-    async getTopLands(_limit: bigint): Promise<TopLandEntry[]> { return []; }
-    async getMyModifications(): Promise<Modification[]> { return []; }
-    async getMyModifierInventory(): Promise<ModifierInstance[]> { return []; }
-    async getMyLootCaches(): Promise<LootCache[]> { return []; }
-    async discoverLootCache(_tier: bigint): Promise<DiscoverCacheResult> { return { __kind__: "paymentFailed", paymentFailed: "stub" }; }
-    async processCache(_cacheId: bigint): Promise<ModifierInstance> { return { modifierInstanceId: 0n, modifierType: "", model_url: "", rarity_tier: 0n, multiplier_value: 1 }; }
-    async getTokenBalance(): Promise<bigint> { return 0n; }
+    async getLandData(): Promise<LandData[]> {
+        const result = await this.actor.getLandData();
+        return result.map(convertLandData);
+    }
+    async getLandDataQuery(): Promise<LandData[]> {
+        const result = await this.actor.getLandDataQuery();
+        if (result.length === 0) return [];
+        return result[0].map(convertLandData);
+    }
+    async getUserProfile(principal: Principal): Promise<Option<UserProfile>> {
+        const result = await this.actor.getUserProfile(principal);
+        return fromCandidOpt(result);
+    }
+    async getCallerUserProfile(): Promise<Option<UserProfile>> {
+        const result = await this.actor.getCallerUserProfile();
+        return fromCandidOpt(result);
+    }
+    async saveCallerUserProfile(profile: UserProfile): Promise<void> {
+        await this.actor.saveCallerUserProfile(profile);
+    }
+    async getCallerUserRole(): Promise<string> {
+        const result = await this.actor.getCallerUserRole();
+        return Object.keys(result)[0];
+    }
+    async isCallerAdmin(): Promise<boolean> {
+        return this.actor.isCallerAdmin();
+    }
+    async initializeAccessControl(): Promise<void> {
+        try {
+            await this.actor.initializeAccessControl();
+        } catch (e) {
+            console.warn("initializeAccessControl:", e);
+        }
+    }
+    async claimRewards(landId: bigint): Promise<ClaimResult> {
+        const result = await this.actor.claimRewards(landId);
+        return fromCandidVariant(result);
+    }
+    async upgradePlot(landId: bigint, cost: bigint): Promise<UpgradeResult> {
+        const result = await this.actor.upgradePlot(landId, cost);
+        return fromCandidVariant(result);
+    }
+    async updatePlotName(landId: bigint, name: string): Promise<void> {
+        await this.actor.updatePlotName(landId, name);
+    }
+    async updateDecoration(landId: bigint, url: string): Promise<void> {
+        await this.actor.updateDecoration(landId, url);
+    }
+    async applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void> {
+        await this.actor.applyModifier(modifierInstanceId, landId);
+    }
+    async mintLand(): Promise<unknown> {
+        return this.actor.mintLand();
+    }
+    async getTopLands(limit: bigint): Promise<TopLandEntry[]> {
+        return this.actor.getTopLands(limit);
+    }
+    async getMyModifications(): Promise<Modification[]> {
+        return this.actor.getMyModifications();
+    }
+    async getMyModifierInventory(): Promise<ModifierInstance[]> {
+        return [];
+    }
+    async getMyLootCaches(): Promise<LootCache[]> {
+        return this.actor.getMyLootCaches();
+    }
+    async discoverLootCache(tier: bigint): Promise<DiscoverCacheResult> {
+        const result = await this.actor.discoverLootCache(tier);
+        return fromCandidVariant(result);
+    }
+    async processCache(cacheId: bigint): Promise<ModifierInstance> {
+        return this.actor.processCache(cacheId);
+    }
+    async getTokenBalance(): Promise<bigint> {
+        return this.actor.getCurrentCbrBalance();
+    }
     async getCanisterTokenBalance(): Promise<bigint> { return 0n; }
     async debugTokenBalance(): Promise<void> {}
     async debugCanisterBalance(): Promise<void> {}
