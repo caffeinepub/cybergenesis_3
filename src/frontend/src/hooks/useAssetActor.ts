@@ -24,6 +24,9 @@ const IC_GATEWAYS = [
 
 const LOCAL_HOST = "http://localhost:4943";
 
+// Hardcoded fallback — used when .env is unavailable (Caffeine build pipeline)
+const FALLBACK_ASSET_CANISTER_ID = "bd3sg-teaaa-aaaaa-qaaba-cai";
+
 interface EnvValidationResult {
   isValid: boolean;
   errors: string[];
@@ -41,7 +44,8 @@ function validateEnvironmentVariables(): EnvValidationResult {
 
   const assetCanisterId =
     import.meta.env.VITE_ASSET_CANISTER_ID ||
-    import.meta.env.CANISTER_ID_ASSET_CANISTER;
+    import.meta.env.CANISTER_ID_ASSET_CANISTER ||
+    FALLBACK_ASSET_CANISTER_ID;
 
   if (!assetCanisterId) {
     errors.push("VITE_ASSET_CANISTER_ID is not configured");
@@ -49,7 +53,8 @@ function validateEnvironmentVariables(): EnvValidationResult {
     errors.push(`Invalid Asset Canister ID format: "${assetCanisterId}"`);
   }
 
-  const network = import.meta.env.VITE_DFX_NETWORK || "ic";
+  const network =
+    import.meta.env.VITE_DFX_NETWORK || import.meta.env.DFX_NETWORK || "ic";
   if (network !== "ic" && network !== "local") {
     warnings.push(`Unexpected VITE_DFX_NETWORK value: "${network}", using: ic`);
   }
