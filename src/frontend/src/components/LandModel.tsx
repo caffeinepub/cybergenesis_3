@@ -7,23 +7,13 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 interface LandModelProps {
   modelUrl: string;
   biome?: string;
-  debugEmissive?: number;
 }
 
-export default function LandModel({
-  modelUrl,
-  biome,
-  debugEmissive,
-}: LandModelProps) {
+export default function LandModel({ modelUrl, biome }: LandModelProps) {
   const { gl, camera } = useThree();
   const fittedRef = useRef(false);
   const isInitialized = useRef(false);
   const group = useRef<THREE.Group>(null);
-  const debugEmissiveRef = useRef<number | undefined>(debugEmissive);
-
-  useEffect(() => {
-    debugEmissiveRef.current = debugEmissive;
-  }, [debugEmissive]);
 
   const ktx2Loader = useMemo(() => {
     const loader = new KTX2Loader();
@@ -51,12 +41,13 @@ export default function LandModel({
     console.log("[LandModel] Maximum anisotropy capability:", maxAnisotropy);
     const landType = biome || "DEFAULT";
     const settings: Record<string, { env: number; emissive: number }> = {
-      MYTHIC_VOID: { env: 3.0, emissive: 1.0 },
-      ISLAND_ARCHIPELAGO: { env: 3.0, emissive: 1.0 },
-      DESERT_DUNE: { env: 1.0, emissive: 1.0 },
-      VOLCANIC_CRAG: { env: 1.5, emissive: 1.0 },
+      MYTHIC_VOID: { env: 3.0, emissive: 1.2 },
+      ISLAND_ARCHIPELAGO: { env: 3.0, emissive: 1.6 },
+      DESERT_DUNE: { env: 1.0, emissive: 1.05 },
+      VOLCANIC_CRAG: { env: 1.5, emissive: 1.8 },
       FOREST_VALLEY: { env: 1.0, emissive: 1.0 },
-      MYTHIC_AETHER: { env: 1.0, emissive: 1.0 },
+      SNOW_PEAK: { env: 1.0, emissive: 1.0 },
+      MYTHIC_AETHER: { env: 1.0, emissive: 1.5 },
       DEFAULT: { env: 1.0, emissive: 1.0 },
     };
     const config = settings[landType] || settings.DEFAULT;
@@ -142,8 +133,7 @@ export default function LandModel({
             m.emissiveMap ||
             (m.emissive && !m.emissive.equals(new THREE.Color(0x000000)))
           ) {
-            const baseIntensity: number =
-              debugEmissiveRef.current ?? m.userData.baseEmissive ?? 1.0;
+            const baseIntensity: number = m.userData.baseEmissive ?? 1.0;
             m.emissiveIntensity =
               baseIntensity *
               (1.0 + Math.sin(state.clock.elapsedTime * 0.8) * 0.15);

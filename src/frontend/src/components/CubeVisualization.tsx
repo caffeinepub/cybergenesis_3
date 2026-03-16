@@ -385,7 +385,6 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
   }, [biome]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [debugEmissive, setDebugEmissive] = useState(1.0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = async () => {
@@ -440,11 +439,7 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
           <SceneSetup />
           <CameraLayerSetup />
           <BackgroundSphere />
-          <LandModel
-            modelUrl={modelUrl}
-            biome={biome}
-            debugEmissive={debugEmissive}
-          />
+          <LandModel modelUrl={modelUrl} biome={biome} />
           <Environment
             files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/artist_workshop_1k.hdr"
             environmentIntensity={1.5}
@@ -461,45 +456,6 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
           <SelectiveBloomEffect />
         </Suspense>
       </Canvas>
-
-      {/* DEBUG: Emissive Intensity Slider — remove after calibration */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 16,
-          left: 16,
-          zIndex: 50,
-          background: "rgba(0,0,0,0.55)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(0,255,255,0.2)",
-          borderRadius: 12,
-          padding: "8px 14px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-          userSelect: "none",
-        }}
-      >
-        <div
-          style={{
-            color: "rgba(0,255,255,0.8)",
-            fontSize: 11,
-            fontFamily: "monospace",
-            letterSpacing: 1,
-          }}
-        >
-          emissive: {debugEmissive.toFixed(2)}
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={7}
-          step={0.05}
-          value={debugEmissive}
-          onChange={(e) => setDebugEmissive(Number.parseFloat(e.target.value))}
-          style={{ width: 130, accentColor: "#00ffff", cursor: "pointer" }}
-        />
-      </div>
 
       <button
         type="button"

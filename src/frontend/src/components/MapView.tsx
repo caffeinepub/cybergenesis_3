@@ -9,13 +9,13 @@ const MAP_SIZE = 2560;
 const RAW_MAP_URL = "/assets/uploads/IMG_0133-1.webp";
 
 const BIOME_COLORS: Record<string, string> = {
-  MYTHIC_VOID: "#aa44ff",
-  MYTHIC_AETHER: "#2277ff",
-  VOLCANIC_CRAG: "#ff3300",
-  DESERT_DUNE: "#ffcc00",
-  FOREST_VALLEY: "#00ff66",
-  SNOW_PEAK: "#aaddff",
-  ISLAND_ARCHIPELAGO: "#00ffee",
+  MYTHIC_VOID: "#cc00ff",
+  MYTHIC_AETHER: "#0088ff",
+  VOLCANIC_CRAG: "#ff2200",
+  DESERT_DUNE: "#ffaa00",
+  FOREST_VALLEY: "#00ff44",
+  SNOW_PEAK: "#88ddff",
+  ISLAND_ARCHIPELAGO: "#00ffcc",
 };
 
 const BIOME_REGIONS: Record<
@@ -41,32 +41,54 @@ function getPointInBiome(landId: number, biome: string): [number, number] {
   ];
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const r = Number.parseInt(hex.slice(1, 3), 16);
+  const g = Number.parseInt(hex.slice(3, 5), 16);
+  const b = Number.parseInt(hex.slice(5, 7), 16);
+  return [r, g, b];
+}
+
 function makeBeamIcon(L: any, color: string, isOwner: boolean) {
-  const shaftH = isOwner ? 110 : 70;
-  const shaftW = isOwner ? 5 : 2;
-  // Neon triple-glow: tight bright core + mid bloom + wide halo
-  const glow = isOwner
-    ? `0 0 3px #fff, 0 0 8px ${color}, 0 0 20px ${color}, 0 0 45px ${color}`
-    : `0 0 2px #fff, 0 0 6px ${color}, 0 0 16px ${color}`;
-  const opacity = isOwner ? "1" : "0.75";
+  const [r, g, b] = hexToRgb(color);
+  const h = isOwner ? 140 : 90;
+  const coreW = isOwner ? 4 : 2;
+  const glowW = isOwner ? 32 : 22;
+  const blurPx = isOwner ? 7 : 5;
+
+  // Solid saturated neon core beam
+  const coreShadow = isOwner
+    ? `0 0 5px 2px rgba(${r},${g},${b},1), 0 0 14px 4px rgba(${r},${g},${b},0.8), 0 0 28px 6px rgba(${r},${g},${b},0.4)`
+    : `0 0 4px 1px rgba(${r},${g},${b},0.9), 0 0 10px 3px rgba(${r},${g},${b},0.6)`;
 
   const html = `
-    <div style="display:flex;flex-direction:column;align-items:center;pointer-events:none;">
+    <div style="position:relative;width:${glowW}px;height:${h}px;pointer-events:none;">
       <div style="
-        width:${shaftW}px;
-        height:${shaftH}px;
-        background:linear-gradient(to bottom,transparent 0%,${color}55 30%,${color} 100%);
-        box-shadow:${glow};
-        border-radius:${shaftW}px;
-        opacity:${opacity};
+        position:absolute;
+        left:50%;
+        transform:translateX(-50%);
+        width:${glowW}px;
+        height:${h}px;
+        background:linear-gradient(to bottom,transparent 0%,rgba(${r},${g},${b},0.35) 40%,rgba(${r},${g},${b},0.65) 100%);
+        border-radius:${glowW / 2}px;
+        filter:blur(${blurPx}px);
+      "></div>
+      <div style="
+        position:absolute;
+        left:50%;
+        transform:translateX(-50%);
+        width:${coreW}px;
+        height:${h}px;
+        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.55) 0%,rgba(${r},${g},${b},1) 100%);
+        border-radius:${coreW / 2}px;
+        box-shadow:${coreShadow};
       "></div>
     </div>`;
 
   return L.divIcon({
     html,
     className: "",
-    iconSize: [shaftW, shaftH],
-    iconAnchor: [shaftW / 2, shaftH],
+    iconSize: [glowW, h],
+    iconAnchor: [glowW / 2, h],
   });
 }
 
@@ -74,6 +96,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const beamLayerRef = useRef<any>(null);
+  const hasZoomedRef = useRef(false);
   const [isEngineReady, setIsEngineReady] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -114,18 +137,17 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     const map = L.map(mapContainerRef.current, {
       crs: L.CRS.Simple,
       minZoom: -2,
-      maxZoom: 3,
+      maxZoom: 2,
       zoomControl: false,
       attributionControl: false,
       maxBoundsViscosity: 1.0,
-      // Premium scroll feel
       inertia: true,
-      inertiaDeceleration: 1200,
-      inertiaMaxSpeed: 2500,
-      easeLinearity: 0.12,
+      inertiaDeceleration: 2000,
+      inertiaMaxSpeed: 5000,
+      easeLinearity: 0.18,
       zoomAnimation: true,
       zoomAnimationThreshold: 4,
-      wheelPxPerZoomLevel: 60,
+      wheelPxPerZoomLevel: 35,
     });
     const bounds: [[number, number], [number, number]] = [
       [0, 0],
@@ -160,7 +182,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
   }, [isEngineReady]);
 
-  // Draw beams; zoom to owner's land
+  // Draw beams + zoom to owner's land once
   useEffect(() => {
     const map = mapRef.current;
     const beamLayer = beamLayerRef.current;
@@ -176,7 +198,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         const isOwner =
           principalId != null && land.owner?.toString() === principalId;
         if (isOwner && !myCoords) myCoords = coords;
-        const color = BIOME_COLORS[land.biome] ?? "#8844ff";
+        const color = BIOME_COLORS[land.biome] ?? "#8800ff";
         L.marker(coords, { icon: makeBeamIcon(L, color, isOwner) }).addTo(
           beamLayer,
         );
@@ -185,11 +207,12 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       console.warn("[MapView] beam render error:", e);
     }
 
-    if (myCoords) {
-      // Zoom to roughly half-map scale centered on user's land
-      map.flyTo(myCoords, 0.5, {
+    // Zoom to user's land only once on first successful load
+    if (myCoords && !hasZoomedRef.current) {
+      hasZoomedRef.current = true;
+      map.flyTo(myCoords, 1.5, {
         animate: true,
-        duration: 1.6,
+        duration: 1.8,
         easeLinearity: 0.2,
       });
     }
