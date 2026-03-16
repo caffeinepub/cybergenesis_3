@@ -55,7 +55,6 @@ function makeBeamIcon(L: any, color: string, isOwner: boolean) {
   const glowW = isOwner ? 32 : 22;
   const blurPx = isOwner ? 7 : 5;
 
-  // Solid saturated neon core beam
   const coreShadow = isOwner
     ? `0 0 5px 2px rgba(${r},${g},${b},1), 0 0 14px 4px rgba(${r},${g},${b},0.8), 0 0 28px 6px rgba(${r},${g},${b},0.4)`
     : `0 0 4px 1px rgba(${r},${g},${b},0.9), 0 0 10px 3px rgba(${r},${g},${b},0.6)`;
@@ -99,7 +98,8 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const hasZoomedRef = useRef(false);
   const [isEngineReady, setIsEngineReady] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isZoomReady, setIsZoomReady] = useState(false);
 
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
@@ -110,6 +110,12 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     queryFn: () => actor?.getLandData(),
     enabled: !!actor,
   });
+
+  // Failsafe: mark zoom ready after 6s in case lands never arrive
+  useEffect(() => {
+    const t = setTimeout(() => setIsZoomReady(true), 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -142,20 +148,21 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       attributionControl: false,
       maxBoundsViscosity: 1.0,
       inertia: true,
-      inertiaDeceleration: 2000,
-      inertiaMaxSpeed: 5000,
-      easeLinearity: 0.18,
+      inertiaDeceleration: 400,
+      inertiaMaxSpeed: 6000,
+      easeLinearity: 0.1,
       zoomAnimation: true,
       zoomAnimationThreshold: 4,
       wheelPxPerZoomLevel: 35,
+      scrollWheelZoom: false,
     });
     const bounds: [[number, number], [number, number]] = [
       [0, 0],
       [MAP_SIZE, MAP_SIZE],
     ];
     const overlay = L.imageOverlay(RAW_MAP_URL, bounds);
-    overlay.on("load", () => setIsDataLoaded(true));
-    overlay.on("error", () => setIsDataLoaded(true));
+    overlay.on("load", () => setIsImageLoaded(true));
+    overlay.on("error", () => setIsImageLoaded(true));
     overlay.addTo(map);
     map.setMaxBounds(bounds);
     map.fitBounds(bounds);
@@ -171,9 +178,38 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
     updateMinZoom();
     window.addEventListener("resize", updateMinZoom);
+
+    // CSS acceleration hint for leaflet panes
+    const perfStyle = document.createElement("style");
+    perfStyle.textContent = ".leaflet-pane { will-change: transform; }";
+    document.head.appendChild(perfStyle);
+
+    // Smooth custom wheel zoom
+    let zoomTarget = map.getZoom();
+    let wheelTimer: ReturnType<typeof setTimeout> | null = null;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.4 : -0.4;
+      zoomTarget = Math.max(
+        map.getMinZoom(),
+        Math.min(map.getMaxZoom(), zoomTarget + delta),
+      );
+      if (wheelTimer) clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => {
+        const containerPoint = L.point(e.clientX, e.clientY);
+        const latlng = map.containerPointToLatLng(containerPoint);
+        map.flyTo(latlng, zoomTarget, { duration: 0.35, easeLinearity: 0.1 });
+      }, 30);
+    };
+    mapContainerRef.current?.addEventListener("wheel", onWheel, {
+      passive: false,
+    });
+
     setIsMapReady(true);
     return () => {
       window.removeEventListener("resize", updateMinZoom);
+      mapContainerRef.current?.removeEventListener("wheel", onWheel);
+      if (wheelTimer) clearTimeout(wheelTimer);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -196,7 +232,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       for (const land of lands as any[]) {
         const coords = getPointInBiome(Number(land.landId), land.biome);
         const isOwner =
-          principalId != null && land.owner?.toString() === principalId;
+          principalId != null && land.principal?.toString() === principalId;
         if (isOwner && !myCoords) myCoords = coords;
         const color = BIOME_COLORS[land.biome] ?? "#8800ff";
         L.marker(coords, { icon: makeBeamIcon(L, color, isOwner) }).addTo(
@@ -207,7 +243,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       console.warn("[MapView] beam render error:", e);
     }
 
-    // Zoom to user's land only once on first successful load
     if (myCoords && !hasZoomedRef.current) {
       hasZoomedRef.current = true;
       map.flyTo(myCoords, 1.5, {
@@ -215,12 +250,17 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         duration: 1.8,
         easeLinearity: 0.2,
       });
+      setTimeout(() => setIsZoomReady(true), 700);
+    } else if (!myCoords) {
+      setIsZoomReady(true);
     }
   }, [lands, principalId, isMapReady]);
 
+  const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
+
   const content = (
     <div style={containerStyle}>
-      {(!isEngineReady || !isDataLoaded) && (
+      {showOverlay && (
         <div style={loadingOverlayStyle}>
           <div className="cyber-loader">
             <div className="loader-text">SCANNING SECTORS...</div>
