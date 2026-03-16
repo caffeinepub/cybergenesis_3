@@ -441,10 +441,6 @@ export function useGetModifierInventory() {
     queryFn: async () => {
       if (!actor) return [];
       console.log("Fetching modifier inventory...");
-
-      // Note: Backend needs to expose getMyModifierInventory() or similar
-      // For now, we'll return empty array as placeholder
-      // TODO: Update when backend method is available
       console.warn("getMyModifierInventory not yet implemented in backend");
       return [];
     },
@@ -476,6 +472,39 @@ export function useApplyModifier() {
       console.error("Apply modifier error:", error);
       toast.error(
         `Ошибка применения модификатора: ${error.message || "Неизвестная ошибка"}`,
+      );
+    },
+  });
+}
+
+// Remove Modifier Mutation
+export function useRemoveModifier() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      landId,
+      modifierInstanceId,
+    }: { landId: bigint; modifierInstanceId: bigint }) => {
+      if (!actor) throw new Error("Actor not available");
+      console.log(
+        "Removing modifier:",
+        modifierInstanceId,
+        "from land:",
+        landId,
+      );
+      await actor.removeModifier(landId, modifierInstanceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["landData"] });
+      queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
+      toast.success("Модификатор снят с земли!");
+    },
+    onError: (error: any) => {
+      console.error("Remove modifier error:", error);
+      toast.error(
+        `Ошибка снятия модификатора: ${error.message || "Неизвестная ошибка"}`,
       );
     },
   });
@@ -548,7 +577,7 @@ export function useGetStakedBalance() {
   return useQuery({
     queryKey: ["stakedBalance"],
     queryFn: async () => BigInt(0),
-    enabled: false, // Disabled until governance backend is integrated
+    enabled: false,
   });
 }
 
@@ -558,7 +587,6 @@ export function useStakeTokens() {
   return useMutation<StakeResult, Error, bigint>({
     mutationFn: async (amount: bigint) => {
       console.log("Staking tokens:", amount);
-      // TODO: Implement governance staking
       throw new Error("Governance staking not yet implemented");
     },
     onSuccess: () => {
@@ -577,10 +605,9 @@ export function useGetAllActiveProposals() {
     queryKey: ["activeProposals"],
     queryFn: async () => {
       console.log("Fetching active proposals...");
-      // TODO: Implement governance proposals
       return [];
     },
-    enabled: false, // Disabled until governance backend is integrated
+    enabled: false,
   });
 }
 
@@ -593,7 +620,6 @@ export function useCreateProposal() {
       description,
     }: { title: string; description: string }) => {
       console.log("Creating proposal:", title, description);
-      // TODO: Implement governance proposal creation
       throw new Error("Governance proposal creation not yet implemented");
     },
     onSuccess: () => {
@@ -622,7 +648,6 @@ export function useVote() {
       choice,
     }: { proposalId: bigint; choice: boolean }) => {
       console.log("Voting on proposal:", proposalId, choice);
-      // TODO: Implement governance voting
       throw new Error("Governance voting not yet implemented");
     },
     onSuccess: () => {
@@ -644,10 +669,9 @@ export function useGetAllActiveListings() {
     queryKey: ["activeListings"],
     queryFn: async () => {
       console.log("Fetching active listings...");
-      // TODO: Implement marketplace listings
       return [];
     },
-    enabled: false, // Disabled until marketplace backend is integrated
+    enabled: false,
   });
 }
 
@@ -661,7 +685,6 @@ export function useListItem() {
       price,
     }: { itemId: bigint; itemType: ItemType; price: bigint }) => {
       console.log("Listing item:", itemId, itemType, price);
-      // TODO: Implement marketplace listing
       throw new Error("Marketplace listing not yet implemented");
     },
     onSuccess: () => {
@@ -683,7 +706,6 @@ export function useBuyItem() {
   return useMutation<BuyResult, Error, bigint>({
     mutationFn: async (listingId: bigint) => {
       console.log("Buying item:", listingId);
-      // TODO: Implement marketplace buying
       throw new Error("Marketplace buying not yet implemented");
     },
     onSuccess: () => {
@@ -705,7 +727,6 @@ export function useCancelListing() {
   return useMutation({
     mutationFn: async (listingId: bigint) => {
       console.log("Cancelling listing:", listingId);
-      // TODO: Implement marketplace cancel listing
       throw new Error("Marketplace cancel listing not yet implemented");
     },
     onSuccess: () => {

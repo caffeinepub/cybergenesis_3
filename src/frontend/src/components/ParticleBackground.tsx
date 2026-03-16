@@ -1,69 +1,76 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
 
-    interface Particle {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      color: string;
-      alpha: number;
-    }
-    const colors = ["#00ffff", "#9933ff", "#00ff41", "#0099ff"];
-    const particles: Particle[] = [];
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        size: Math.random() * 2 + 0.5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        alpha: Math.random() * 0.6 + 0.1,
-      });
-    }
+    const particles = Array.from({ length: 40 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      size: Math.random() * 1.5 + 0.5,
+      color: ["#00f3ff", "#ff00ff", "#00ffaa", "#9d00ff"][
+        Math.floor(Math.random() * 4)
+      ],
+    }));
 
-    let raf: number;
     const animate = () => {
+      // Clear fully so CosmicBackground shows through
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
+
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        // Outer soft glow
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = 0.25;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright core
+        ctx.globalAlpha = 0.9;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `${p.color}${Math.floor(p.alpha * 255)
-          .toString(16)
-          .padStart(2, "0")}`;
         ctx.fill();
-      }
-      raf = requestAnimationFrame(animate);
-    };
-    animate();
 
-    return () => cancelAnimationFrame(raf);
+        ctx.globalAlpha = 1;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (animationFrameRef.current)
+        cancelAnimationFrame(animationFrameRef.current);
+    };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
-      style={{ zIndex: 1, pointerEvents: "none" }}
+      className="fixed inset-0 w-full h-full pointer-events-none"
+      style={{ zIndex: 1 }}
     />
   );
 }

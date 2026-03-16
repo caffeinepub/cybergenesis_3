@@ -207,13 +207,37 @@ actor CyberGenesisLandMint {
     { lat; lon };
   };
 
+  // Returns charge rate per minute based on upgrade level
+  // Placeholder values — will be updated with final numbers
+  func getChargeRatePerMinute(level : Nat) : Int {
+    switch (level) {
+      case 0 { 100 };
+      case 1 { 200 };
+      case 2 { 300 };
+      case 3 { 400 };
+      case _ { 500 };
+    };
+  };
+
+  // Returns charge cap based on upgrade level
+  func getChargeCap(level : Nat) : Nat {
+    switch (level) {
+      case 0 { 1000 };
+      case 1 { 2000 };
+      case 2 { 3000 };
+      case 3 { 4000 };
+      case _ { 5000 };
+    };
+  };
+
   func updateCharge(data : LandData) : LandData {
     let currentTime = Time.now();
     let elapsedTime = currentTime - data.lastChargeUpdate;
     let minutesElapsed = elapsedTime / 60_000_000_000;
+    let chargePerMinute = getChargeRatePerMinute(data.upgradeLevel);
     let cap : Int = data.chargeCap;
-    let newCharge = if (data.cycleCharge + minutesElapsed > cap) { cap }
-                   else { data.cycleCharge + minutesElapsed };
+    let newCharge = if (data.cycleCharge + minutesElapsed * chargePerMinute > cap) { cap }
+                   else { data.cycleCharge + minutesElapsed * chargePerMinute };
     { data with cycleCharge = newCharge; lastChargeUpdate = currentTime };
   };
 
@@ -376,12 +400,11 @@ actor CyberGenesisLandMint {
           case (?index) {
             let land = lands[index];
             let updatedLand = updateCharge(land);
-            if (updatedLand.upgradeLevel >= 5) { return #maxLevelReached };
-            if (cost > 0) {
-              return #insufficientTokens { required = cost; current = 0 };
-            };
+            // Max display level is 5/5 (upgradeLevel = 4)
+            if (updatedLand.upgradeLevel >= 4) { return #maxLevelReached };
             let newLevel = updatedLand.upgradeLevel + 1;
-            let finalLand = { updatedLand with upgradeLevel = newLevel };
+            let newCap = getChargeCap(newLevel);
+            let finalLand = { updatedLand with upgradeLevel = newLevel; chargeCap = newCap };
             let updatedLands = Array.tabulate(lands.size(), func(i : Nat) : LandData {
               if (i == index) { finalLand } else { lands[i] };
             });
@@ -846,6 +869,16 @@ actor CyberGenesisLandMint {
         };
         highest;
       };
+    };
+  };
+
+  public query ({ caller }) func getMyModifierInventory() : async [ModifierInstance] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view their modifier inventory");
+    };
+    switch (playerInventory.get(caller)) {
+      case (?inventory) { inventory };
+      case null { [] };
     };
   };
 

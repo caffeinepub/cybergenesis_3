@@ -97,6 +97,7 @@ export interface backendInterface {
   updatePlotName(landId: bigint, name: string): Promise<void>;
   updateDecoration(landId: bigint, url: string): Promise<void>;
   applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void>;
+  removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void>;
   mintLand(): Promise<unknown>;
   getTopLands(limit: bigint): Promise<TopLandEntry[]>;
   getMyModifications(): Promise<Modification[]>;

@@ -2,12 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   Compass,
+  Hammer,
   Map as MapIcon,
+  Package,
   ShoppingCart,
   Trophy,
   Vote,
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import type { LandData } from "../backend";
 import CubeVisualization from "../components/CubeVisualization";
 import Discovery from "../components/Discovery";
@@ -23,11 +25,26 @@ import Collection from "./Collection";
 type TabType =
   | "land"
   | "discovery"
+  | "craft"
   | "collection"
   | "leaderboard"
   | "marketplace"
   | "governance"
-  | "map";
+  | "map"
+  | "guide";
+
+function ComingSoon() {
+  return (
+    <div className="text-center py-16">
+      <p className="text-[#00ffff] font-orbitron text-xl text-glow-cyan mb-3">
+        COMING SOON
+      </p>
+      <p className="text-white/50 font-jetbrains text-sm">
+        This section is under development
+      </p>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { actor } = useActor();
@@ -52,7 +69,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (lands && lands.length > 0) {
       const currentLand = lands[selectedLandIndex];
-      console.log("[Dashboard] 🌍 Current Land Data:", {
+      console.log("[Dashboard] \uD83C\uDF0D Current Land Data:", {
         index: selectedLandIndex,
         biome: currentLand.biome,
         landId: currentLand.landId,
@@ -67,7 +84,7 @@ export default function Dashboard() {
         <div className="min-h-screen flex items-center justify-center relative z-10">
           <div className="glassmorphism p-8 rounded-lg neon-border box-glow-cyan animate-pulse-glow">
             <div className="text-[#00ffff] text-xl animate-pulse font-orbitron text-glow-cyan">
-              Загрузка данных...
+              Loading data...
             </div>
           </div>
         </div>
@@ -81,7 +98,7 @@ export default function Dashboard() {
         <div className="min-h-screen flex items-center justify-center relative z-10">
           <div className="glassmorphism p-8 rounded-lg neon-border box-glow-gold">
             <div className="text-red-400 text-xl font-orbitron">
-              Земля не найдена
+              Land not found
             </div>
           </div>
         </div>
@@ -92,13 +109,15 @@ export default function Dashboard() {
   const currentLand = lands[selectedLandIndex];
 
   const tabs = [
-    { id: "land" as TabType, icon: Compass, label: "Земля" },
-    { id: "discovery" as TabType, icon: BookOpen, label: "Открытия" },
-    { id: "collection" as TabType, icon: BookOpen, label: "Коллекция" },
-    { id: "leaderboard" as TabType, icon: Trophy, label: "Рейтинг" },
-    { id: "marketplace" as TabType, icon: ShoppingCart, label: "Рынок" },
-    { id: "governance" as TabType, icon: Vote, label: "Управление" },
-    { id: "map" as TabType, icon: MapIcon, label: "Карта" },
+    { id: "land" as TabType, icon: Compass, label: "Land" },
+    { id: "discovery" as TabType, icon: Package, label: "Discovery" },
+    { id: "craft" as TabType, icon: Hammer, label: "Craft" },
+    { id: "collection" as TabType, icon: BookOpen, label: "Collection" },
+    { id: "leaderboard" as TabType, icon: Trophy, label: "Leaderboard" },
+    { id: "marketplace" as TabType, icon: ShoppingCart, label: "Marketplace" },
+    { id: "governance" as TabType, icon: Vote, label: "Governance" },
+    { id: "map" as TabType, icon: MapIcon, label: "Map" },
+    { id: "guide" as TabType, icon: BookOpen, label: "Guide" },
   ];
 
   const handleMapClose = () => {
@@ -140,6 +159,7 @@ export default function Dashboard() {
               <nav className="grid grid-cols-2 gap-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
                   return (
                     <button
                       type="button"
@@ -149,14 +169,19 @@ export default function Dashboard() {
                         flex items-center justify-center gap-2 px-4 py-3 rounded-lg
                         transition-all duration-300 font-medium font-orbitron
                         ${
-                          activeTab === tab.id
+                          isActive
                             ? "glassmorphism neon-border text-[#00ffff] box-glow-cyan text-glow-cyan"
                             : "glassmorphism border border-[#9933ff]/30 text-[#9933ff] hover:border-[#00ffff]/50 hover:text-[#00ffff] hover:box-glow-cyan"
                         }
                       `}
+                      data-ocid={`nav.${tab.id}_tab`}
                     >
                       <Icon className="w-5 h-5" />
-                      <span className="text-sm">{tab.label}</span>
+                      <span
+                        className={`text-sm ${!isActive ? "text-[#00ffff]" : ""}`}
+                      >
+                        {tab.label}
+                      </span>
                     </button>
                   );
                 })}
@@ -169,10 +194,12 @@ export default function Dashboard() {
               <LandDashboard selectedLandIndex={selectedLandIndex} />
             )}
             {activeTab === "discovery" && <Discovery />}
+            {activeTab === "craft" && <ComingSoon />}
             {activeTab === "collection" && <Collection />}
             {activeTab === "leaderboard" && <Leaderboard />}
             {activeTab === "marketplace" && <Marketplace />}
             {activeTab === "governance" && <Governance />}
+            {activeTab === "guide" && <ComingSoon />}
           </div>
         </div>
       </div>

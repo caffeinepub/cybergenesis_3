@@ -1,95 +1,107 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export default function CosmicBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nebulaCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     if (!ctx) return;
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      preRenderNebula();
     };
+
+    const preRenderNebula = () => {
+      const nCanvas = document.createElement("canvas");
+      nCanvas.width = canvas.width;
+      nCanvas.height = canvas.height;
+      const nCtx = nCanvas.getContext("2d");
+      if (!nCtx) return;
+
+      const nebulaColors = [
+        "rgba(0, 119, 255, 0.15)",
+        "rgba(157, 0, 255, 0.12)",
+        "rgba(0, 255, 136, 0.1)",
+      ];
+      for (let i = 0; i < 8; i++) {
+        const x = Math.random() * nCanvas.width;
+        const y = Math.random() * nCanvas.height;
+        const r = Math.random() * 400 + 200;
+        const g = nCtx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, nebulaColors[i % nebulaColors.length]);
+        g.addColorStop(1, "transparent");
+        nCtx.fillStyle = g;
+        nCtx.fillRect(0, 0, nCanvas.width, nCanvas.height);
+      }
+      nebulaCanvasRef.current = nCanvas;
+    };
+
     resize();
     window.addEventListener("resize", resize);
 
-    interface Star {
-      x: number;
-      y: number;
-      r: number;
-      a: number;
-      da: number;
-    }
-    const stars: Star[] = [];
-    for (let i = 0; i < 200; i++) {
-      stars.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        r: Math.random() * 1.5 + 0.5,
-        a: Math.random(),
-        da: (Math.random() - 0.5) * 0.005,
-      });
-    }
+    const stars = Array.from({ length: 250 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      z: Math.random() * canvas.width,
+      size: Math.random() * 1.5 + 0.5,
+      color: ["#00f3ff", "#9d00ff", "#00ffaa", "#ff00ff", "#ffffff"][
+        Math.floor(Math.random() * 5)
+      ],
+      twinkle: Math.random() * Math.PI * 2,
+    }));
 
-    let raf: number;
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#0a0015";
+    const animate = () => {
+      ctx.fillStyle = "#010103";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const grad = ctx.createRadialGradient(
-        canvas.width * 0.5,
-        canvas.height * 0.4,
-        0,
-        canvas.width * 0.5,
-        canvas.height * 0.4,
-        canvas.width * 0.6,
-      );
-      grad.addColorStop(0, "rgba(153,51,255,0.08)");
-      grad.addColorStop(1, "transparent");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const grad2 = ctx.createRadialGradient(
-        canvas.width * 0.1,
-        canvas.height * 0.1,
-        0,
-        canvas.width * 0.1,
-        canvas.height * 0.1,
-        canvas.width * 0.4,
-      );
-      grad2.addColorStop(0, "rgba(0,255,255,0.06)");
-      grad2.addColorStop(1, "transparent");
-      ctx.fillStyle = grad2;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (const s of stars) {
-        s.a += s.da;
-        if (s.a <= 0 || s.a >= 1) s.da *= -1;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200,230,255,${s.a})`;
-        ctx.fill();
+      if (nebulaCanvasRef.current) {
+        ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 2000) * 0.2;
+        ctx.drawImage(nebulaCanvasRef.current, 0, 0);
+        ctx.globalAlpha = 1;
       }
 
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
+      for (const s of stars) {
+        s.z -= 0.8;
+        if (s.z <= 0) s.z = canvas.width;
 
+        const x =
+          (s.x - canvas.width / 2) * (canvas.width / s.z) + canvas.width / 2;
+        const y =
+          (s.y - canvas.height / 2) * (canvas.width / s.z) + canvas.height / 2;
+        const size = s.size * (canvas.width / s.z) * 0.4;
+
+        if (x > 0 && x < canvas.width && y > 0 && y < canvas.height) {
+          s.twinkle += 0.02;
+          const alpha = 0.5 + Math.sin(s.twinkle) * 0.5;
+          ctx.fillStyle = s.color;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(x, y, size, size);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
     return () => {
       window.removeEventListener("resize", resize);
-      cancelAnimationFrame(raf);
+      if (animationFrameRef.current)
+        cancelAnimationFrame(animationFrameRef.current);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
-      style={{ zIndex: 0, pointerEvents: "none" }}
+      className="fixed inset-0 w-full h-full pointer-events-none"
+      style={{ zIndex: 0 }}
     />
   );
 }

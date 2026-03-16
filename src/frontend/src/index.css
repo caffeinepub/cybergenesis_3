@@ -75,7 +75,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: "JetBrains Mono", monospace;
-    background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0d001a 100%);
+    background: #010103;
   }
   h1,
   h2,

@@ -178,6 +178,7 @@ export interface backendInterface {
     updatePlotName(landId: bigint, name: string): Promise<void>;
     updateDecoration(landId: bigint, url: string): Promise<void>;
     applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void>;
+    removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void>;
     mintLand(): Promise<unknown>;
     getTopLands(limit: bigint): Promise<TopLandEntry[]>;
     getMyModifications(): Promise<Modification[]>;
@@ -269,6 +270,9 @@ export class Backend implements backendInterface {
     }
     async applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void> {
         await this.actor.applyModifier(modifierInstanceId, landId);
+    }
+    async removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void> {
+        await (this.actor as any).removeModifier(landId, modifierInstanceId);
     }
     async mintLand(): Promise<unknown> {
         return this.actor.mintLand();
