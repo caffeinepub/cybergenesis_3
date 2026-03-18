@@ -98,11 +98,20 @@ function CameraLayerSetup() {
 }
 
 function KeyLightSync() {
+  useFrame(({ camera }) => {
+    if (keyLightRef.current) {
+      keyLightRef.current.position.set(
+        camera.position.x + 10,
+        camera.position.y + 15,
+        camera.position.z + 10,
+      );
+    }
+  });
+
   return (
     <directionalLight
       ref={keyLightRef}
       name="KeyLight"
-      position={[-15, 8, -20]}
       intensity={Math.PI * 0.8}
       color="#ffffff"
     />
@@ -114,9 +123,9 @@ function SunLightSync() {
     <directionalLight
       ref={sunLightRef}
       name="SunLight"
-      position={[15, 12, -15]}
+      position={[-10, 20, -15]}
       intensity={Math.PI * 0.4}
-      color="#ffecd4"
+      color="#ffe4b5"
     />
   );
 }
@@ -432,7 +441,7 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
           <BackgroundSphere />
           <LandModel modelUrl={modelUrl} biome={biome} />
           <Environment
-            files="/assets/uploads/artist_workshop_1k.hdr"
+            files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/artist_workshop_1k.hdr"
             environmentIntensity={1.5}
             blur={0}
           />
