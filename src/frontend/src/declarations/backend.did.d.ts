@@ -67,12 +67,19 @@ export interface ModifierInstance {
   'rarity_tier' : bigint,
   'multiplier_value' : number,
 }
+export interface PublicLandInfo {
+  'landId' : bigint,
+  'biome' : string,
+  'principal' : Principal,
+}
 export type Time = bigint;
 export interface TopLandEntry {
   'upgradeLevel' : bigint,
   'principal' : Principal,
   'tokenBalance' : bigint,
   'plotName' : string,
+  'biome' : string,
+  'landId' : bigint,
 }
 export interface TransformationInput {
   'context' : Uint8Array,
@@ -103,6 +110,7 @@ export interface _SERVICE {
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'claimRewards' : ActorMethod<[bigint], ClaimResult>,
   'discoverLootCache' : ActorMethod<[bigint], DiscoverCacheResult>,
+  'getAllLandsPublic' : ActorMethod<[], Array<PublicLandInfo>>,
   'getAllModifiers' : ActorMethod<[], Array<Modifier>>,
   'getAssetCanisterCycleBalance' : ActorMethod<[], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -117,17 +125,20 @@ export interface _SERVICE {
   'getModifiersByTier' : ActorMethod<[bigint], Array<Modifier>>,
   'getMyLootCaches' : ActorMethod<[], Array<LootCache>>,
   'getMyModifications' : ActorMethod<[], Array<Modification>>,
+  'getMyModifierInventory' : ActorMethod<[], Array<ModifierInstance>>,
   'getTopLands' : ActorMethod<[bigint], Array<TopLandEntry>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'initializeAccessControl' : ActorMethod<[], undefined>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'mintLand' : ActorMethod<[], LandData>,
   'processCache' : ActorMethod<[bigint], ModifierInstance>,
+  'removeModifier' : ActorMethod<[bigint, bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setGovernanceCanister' : ActorMethod<[Principal], undefined>,
   'setMarketplaceCanister' : ActorMethod<[Principal], undefined>,
   'setTokenCanister' : ActorMethod<[Principal], undefined>,
   'transferLand' : ActorMethod<[Principal, bigint], boolean>,
+  'transferModifier' : ActorMethod<[Principal, Principal, bigint], boolean>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'updateDecoration' : ActorMethod<[bigint, string], undefined>,
   'updatePlotName' : ActorMethod<[bigint, string], undefined>,

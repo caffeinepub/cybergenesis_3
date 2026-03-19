@@ -1,22 +1,98 @@
-import {
-  AlertTriangle,
-  CheckCircle,
-  Loader2,
-  Network,
-  RefreshCw,
-} from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import ConfigValidator from "./components/ConfigValidator";
 import CosmicBackground from "./components/CosmicBackground";
 import ParticleBackground from "./components/ParticleBackground";
-import ProfileSetup from "./components/ProfileSetup";
 import ReinitializationProgress from "./components/ReinitializationProgress";
 import { useActorReinitializer } from "./hooks/useActorReinitializer";
 import { useActorWithInit } from "./hooks/useActorWithInit";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useGetCallerUserProfile } from "./hooks/useQueries";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
+
+function CyberLoader() {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        background: `#000 url('/assets/uploads/IMG_0509-2-1.webp') center/cover no-repeat`,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        fontFamily: "'Orbitron', sans-serif",
+        overflow: "hidden",
+        zIndex: 9999,
+        paddingBottom: "8vh",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+        .loading-top {
+          font-size: clamp(1.4rem, 4vw, 2.4rem);
+          font-weight: 900;
+          letter-spacing: 4px;
+          text-transform: uppercase;
+          color: transparent;
+          -webkit-text-stroke: 1px #000;
+          background: linear-gradient(-60deg,
+            transparent 35%,
+            #00E6E6 42%,
+            #7C3AED 58%,
+            #00FF7F 74%,
+            transparent 82%
+          ) 0/500% 100% text;
+          -webkit-background-clip: text;
+          background-clip: text;
+          display: block;
+          margin-bottom: 0.1em;
+          mix-blend-mode: screen;
+          animation: text-slide-cy 15s linear infinite, void-breath-cy 7s ease-in-out infinite alternate;
+        }
+        .metaverse-bottom {
+          font-size: clamp(1.2rem, 3.5vw, 2rem);
+          font-weight: 700;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          color: transparent;
+          -webkit-text-stroke: 0.9px #000;
+          background: linear-gradient(-60deg,
+            transparent 35%,
+            #00E6E6 42%,
+            #7C3AED 58%,
+            #00FF7F 74%,
+            transparent 82%
+          ) 0/500% 100% text;
+          -webkit-background-clip: text;
+          background-clip: text;
+          display: block;
+          white-space: nowrap;
+          opacity: 0.92;
+          mix-blend-mode: screen;
+          animation: text-slide-cy 15s linear infinite, void-breath-cy 7s ease-in-out infinite alternate;
+        }
+        @keyframes text-slide-cy {
+          to { background-position: 500% }
+        }
+        @keyframes void-breath-cy {
+          from { text-shadow: inset 0 0 30px #000, 0 0 8px rgba(0,230,230,0.15); }
+          to   { text-shadow: inset 0 0 55px #000, 0 0 14px rgba(0,230,230,0.3); }
+        }
+        @media (max-width: 480px) {
+          .loading-top      { font-size: clamp(1.2rem, 6vw, 1.9rem); letter-spacing: 3px; }
+          .metaverse-bottom { font-size: clamp(1rem, 5vw, 1.6rem);   letter-spacing: 2px; }
+        }
+      `}</style>
+      <div style={{ textAlign: "center" }}>
+        <span className="loading-top">LOADING</span>
+        <span className="metaverse-bottom">CYBERLAND METAVERSE</span>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const { identity, isInitializing: identityInitializing } =
@@ -24,28 +100,8 @@ export default function App() {
   const { isInitializing: actorInitializing, error: actorError } =
     useActorWithInit();
   const reinitializer = useActorReinitializer();
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched: profileFetched,
-  } = useGetCallerUserProfile();
-
-  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   const isAuthenticated = !!identity;
-
-  useEffect(() => {
-    if (
-      isAuthenticated &&
-      !profileLoading &&
-      profileFetched &&
-      userProfile === null
-    ) {
-      setShowProfileSetup(true);
-    } else {
-      setShowProfileSetup(false);
-    }
-  }, [isAuthenticated, profileLoading, profileFetched, userProfile]);
 
   if (reinitializer.isReinitializing) {
     return (
@@ -62,99 +118,7 @@ export default function App() {
   }
 
   if (identityInitializing || (isAuthenticated && actorInitializing)) {
-    return (
-      <>
-        <CosmicBackground />
-        <ParticleBackground />
-        <ConfigValidator />
-        <div className="min-h-screen flex items-center justify-center relative z-10 p-4">
-          <div className="text-center space-y-6 p-8 glassmorphism rounded-lg neon-border box-glow-cyan max-w-3xl animate-pulse-glow">
-            <Loader2 className="w-16 h-16 animate-spin text-[#00ffff] mx-auto drop-shadow-[0_0_15px_rgba(0,255,255,0.8)]" />
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold text-[#00ffff] tracking-wider font-orbitron text-glow-cyan">
-                ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ
-              </h2>
-              <p className="text-[#9933ff] text-sm tracking-wide font-jetbrains">
-                {identityInitializing
-                  ? "Загрузка аутентификации..."
-                  : "Подключение к блокчейну Internet Computer..."}
-              </p>
-
-              <div className="glassmorphism p-6 rounded neon-border mt-4">
-                <div className="flex items-center justify-center space-x-2 mb-4">
-                  <Network className="w-6 h-6 text-[#00ffff]" />
-                  <h3 className="text-[#00ffff] font-bold text-base font-orbitron text-glow-cyan">
-                    МАКСИМАЛЬНАЯ СТАБИЛЬНОСТЬ
-                  </h3>
-                </div>
-                <div className="space-y-2 text-xs font-mono text-left font-jetbrains">
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">Таймаут:</span>{" "}
-                      120 секунд (максимально рекомендуемый)
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">
-                        Попытки повтора:
-                      </span>{" "}
-                      25 попыток с экспоненциальной задержкой (1с → 45с)
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">
-                        Основной шлюз:
-                      </span>{" "}
-                      https://ic0.app (официальный DFINITY)
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">
-                        Резервные шлюзы:
-                      </span>{" "}
-                      boundary.ic0.app, icp-api.io (автоматическое переключение)
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">
-                        Опрос данных:
-                      </span>{" "}
-                      25 попыток с 4 проверками работоспособности
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="w-4 h-4 text-[#00ff41] mt-0.5 flex-shrink-0" />
-                    <p className="text-[#00ff41]/90">
-                      <span className="text-[#00ffff] font-bold">
-                        Синхронизация:
-                      </span>{" "}
-                      Полная синхронизация конфигурации фронтенда/бэкенда
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glassmorphism p-4 rounded border border-[#9933ff]/30 mt-4">
-                <p className="text-[#9933ff]/90 text-xs leading-relaxed font-jetbrains">
-                  Установка стабильного соединения с автоматическим
-                  переключением шлюзов и комплексными проверками подключения ко
-                  всем пяти канистрам...
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    return <CyberLoader />;
   }
 
   if (isAuthenticated && actorError) {
@@ -169,117 +133,24 @@ export default function App() {
               <AlertTriangle className="w-12 h-12 text-red-500 flex-shrink-0 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-red-500 mb-4 tracking-wider font-orbitron">
-                  ОШИБКА ПОДКЛЮЧЕНИЯ
+                  CONNECTION ERROR
                 </h2>
                 <p className="text-red-300 mb-4 leading-relaxed font-jetbrains">
-                  Не удалось установить стабильное соединение с сетью Internet
-                  Computer после множественных попыток повтора с таймаутом 120
-                  секунд, экспоненциальной задержкой (25 попыток) и
-                  автоматическим переключением шлюзов.
+                  Failed to establish stable connection to Internet Computer
+                  network.
                 </p>
-
                 <div className="glassmorphism border border-red-500/30 rounded p-4 mb-4">
                   <p className="text-red-300 text-xs font-mono break-all font-jetbrains">
-                    <strong>Детали ошибки:</strong> {String(actorError)}
+                    <strong>Error:</strong> {String(actorError)}
                   </p>
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  <h3 className="text-red-100 font-bold text-sm font-orbitron">
-                    ШАГИ ПО УСТРАНЕНИЮ НЕПОЛАДОК:
-                  </h3>
-                  <ul className="list-disc list-inside space-y-2 text-red-200 text-sm font-jetbrains">
-                    <li>Проверьте стабильность вашего интернет-соединения</li>
-                    <li>
-                      Убедитесь, что VITE_DFX_NETWORK установлен на "ic" в файле
-                      .env
-                    </li>
-                    <li>
-                      Подтвердите правильность настройки всех ID канистр:
-                      <ul className="list-circle list-inside ml-6 mt-1 space-y-1 text-xs">
-                        <li>
-                          VITE_LAND_CANISTER_ID (br5f7-7uaaa-aaaaa-qaaca-cai)
-                        </li>
-                        <li>
-                          VITE_ASSET_CANISTER_ID (bd3sg-teaaa-aaaaa-qaaba-cai)
-                        </li>
-                        <li>
-                          VITE_CYBER_TOKEN_CANISTER_ID
-                          (w4q3i-7yaaa-aaaam-ab3oq-cai)
-                        </li>
-                        <li>
-                          VITE_MARKETPLACE_CANISTER_ID
-                          (be2us-64aaa-aaaaa-qaabq-cai)
-                        </li>
-                        <li>
-                          VITE_GOVERNANCE_CANISTER_ID
-                          (bkyz2-fmaaa-aaaaa-qaaaq-cai)
-                        </li>
-                      </ul>
-                    </li>
-                    <li>
-                      Убедитесь, что канистры развернуты и работают в основной
-                      сети IC
-                    </li>
-                    <li>
-                      Попробуйте очистить кэш браузера и перезагрузить страницу
-                    </li>
-                    <li>
-                      Проверьте доступность шлюзов: ic0.app, boundary.ic0.app,
-                      icp-api.io
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="glassmorphism p-4 rounded border border-red-500/30 mb-4">
-                  <h3 className="text-red-100 font-bold mb-2 text-sm font-orbitron">
-                    КОНФИГУРАЦИЯ СЕТИ:
-                  </h3>
-                  <div className="space-y-1 text-xs font-mono font-jetbrains">
-                    <p className="text-red-200">
-                      Сеть:{" "}
-                      <span className="text-[#00ffff]">
-                        {import.meta.env.VITE_DFX_NETWORK || "НЕ УСТАНОВЛЕНО"}
-                      </span>
-                    </p>
-                    <p className="text-red-200">
-                      Основной шлюз:{" "}
-                      <span className="text-[#00ffff]">
-                        https://ic0.app (официальный DFINITY)
-                      </span>
-                    </p>
-                    <p className="text-red-200">
-                      Резервные шлюзы:{" "}
-                      <span className="text-[#00ffff]">
-                        boundary.ic0.app, icp-api.io
-                      </span>
-                    </p>
-                    <p className="text-red-200">
-                      Таймаут:{" "}
-                      <span className="text-[#00ffff]">120 секунд</span>
-                    </p>
-                    <p className="text-red-200">
-                      Логика повтора:{" "}
-                      <span className="text-[#00ffff]">
-                        25 попыток с экспоненциальной задержкой
-                      </span>
-                    </p>
-                    <p className="text-red-200">
-                      Опрос данных:{" "}
-                      <span className="text-[#00ffff]">
-                        25 попыток с 4 проверками работоспособности
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
                   className="w-full px-6 py-3 btn-gradient-cyan text-black font-bold rounded-lg font-orbitron flex items-center justify-center space-x-2"
                 >
                   <RefreshCw className="w-5 h-5" />
-                  <span>Повторить подключение</span>
+                  <span>Retry Connection</span>
                 </button>
               </div>
             </div>
@@ -305,8 +176,7 @@ export default function App() {
       <CosmicBackground />
       <ParticleBackground />
       <ConfigValidator />
-      {showProfileSetup && <ProfileSetup />}
-      {!showProfileSetup && <Dashboard />}
+      <Dashboard />
     </>
   );
 }

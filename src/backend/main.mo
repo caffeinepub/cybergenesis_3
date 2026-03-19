@@ -63,8 +63,10 @@ actor CyberGenesisLandMint {
   public type TopLandEntry = {
     principal : Principal;
     plotName : Text;
+    biome : Text;
     upgradeLevel : Nat;
     tokenBalance : Nat;
+    landId : Nat;
   };
 
   public type Modification = {
@@ -479,6 +481,23 @@ actor CyberGenesisLandMint {
     landRegistry.get(caller);
   };
 
+
+  public type PublicLandInfo = {
+    landId : Nat;
+    biome : Text;
+    principal : Principal;
+  };
+
+  public query func getAllLandsPublic() : async [PublicLandInfo] {
+    var result : [PublicLandInfo] = [];
+    for ((_p, userLands) in landRegistry.entries()) {
+      for (land in userLands.vals()) {
+        result := ([result, [{ landId = land.landId; biome = land.biome; principal = land.principal }]]).flatten();
+      };
+    };
+    result;
+  };
+
   // ── Marketplace / Governance / Token Canister Config ──
 
   public shared ({ caller }) func setMarketplaceCanister(marketplace : Principal) : async () {
@@ -556,12 +575,83 @@ actor CyberGenesisLandMint {
           };
           landRegistry.add(to, ([toLands, [newLand]]).flatten());
           Debug.print("Land transfer successful - LandId: " # landId.toText());
+          // Auto-mint new land if seller now has 0 lands
+          let sellerRemaining = switch (landRegistry.get(principal)) {
+            case (?l) { l };
+            case null { [] };
+          };
+          if (sellerRemaining.size() == 0) {
+            let hash = hashPrincipal(principal) + nextLandId;
+            let coords = generateCoordinates(hash);
+            let biomeVal = getBiome(hash);
+            let rng = Random.crypto();
+            let rv = await* rng.natRange(0, 200);
+            let isMV = rv == 0;
+            let finalBiomeAuto = if (isMV) { "MYTHIC_VOID" } else { biomeVal };
+            let btmAuto = if (isMV) { 1.25 } else { 1.0 };
+            let autoLand : LandData = {
+              principal = principal;
+              coordinates = coords;
+              biome = finalBiomeAuto;
+              upgradeLevel = 0;
+              lastClaimTime = 0;
+              plotName = "My Plot";
+              decorationURL = null;
+              baseTokenMultiplier = btmAuto;
+              cycleCharge = 0;
+              chargeCap = 1000;
+              lastChargeUpdate = Time.now();
+              landId = nextLandId;
+              attachedModifications = [];
+            };
+            nextLandId += 1;
+            landRegistry.add(principal, [autoLand]);
+            Debug.print("Auto-minted land for seller " # principal.toText() # " LandId: " # autoLand.landId.toText());
+          };
           return true;
         };
       };
     };
     Debug.print("Land transfer failed - LandId not found: " # landId.toText());
     false;
+  };
+
+  // Transfer a modifier from one user to another (callable only by marketplace canister)
+  public shared ({ caller }) func transferModifier(from : Principal, to : Principal, modifierInstanceId : Nat) : async Bool {
+    let marketplace = switch (marketplaceCanister) {
+      case null { Runtime.trap("Unauthorized: Marketplace canister must be configured") };
+      case (?m) { m };
+    };
+    if (caller != marketplace) {
+      Runtime.trap("Unauthorized: Only the authorized marketplace canister can transfer modifiers");
+    };
+    let fromInventory = switch (playerInventory.get(from)) {
+      case (?inv) { inv };
+      case null { return false };
+    };
+    var modIdx : ?Nat = null;
+    var mi = 0;
+    for (mod in fromInventory.vals()) {
+      if (mod.modifierInstanceId == modifierInstanceId) { modIdx := ?mi };
+      mi += 1;
+    };
+    switch (modIdx) {
+      case null { return false };
+      case (?index) {
+        let modifier = fromInventory[index];
+        let updatedFrom = Array.tabulate(fromInventory.size() - 1, func(i : Nat) : ModifierInstance {
+          if (i < index) { fromInventory[i] } else { fromInventory[i + 1] };
+        });
+        playerInventory.add(from, updatedFrom);
+        let toInventory = switch (playerInventory.get(to)) {
+          case (?inv) { inv };
+          case null { [] };
+        };
+        playerInventory.add(to, ([toInventory, [modifier]]).flatten());
+        Debug.print("Modifier transfer ok - instanceId: " # modifierInstanceId.toText() # " from: " # from.toText() # " to: " # to.toText());
+        return true;
+      };
+    };
   };
 
   public query ({ caller }) func adminGetLandData(user : Principal) : async ?[LandData] {
@@ -578,7 +668,7 @@ actor CyberGenesisLandMint {
     var entries : [TopLandEntry] = [];
     for ((principal, lands) in landRegistry.entries()) {
       for (land in lands.vals()) {
-        entries := ([entries, [{ principal; plotName = land.plotName; upgradeLevel = land.upgradeLevel; tokenBalance = 0 }]]).flatten();
+        entries := ([entries, [{ principal; plotName = land.plotName; biome = land.biome; upgradeLevel = land.attachedModifications.size(); tokenBalance = 0; landId = land.landId }]]).flatten();
       };
     };
     let sortedEntries = entries.sort(func(a : TopLandEntry, b : TopLandEntry) : { #less; #equal; #greater } {

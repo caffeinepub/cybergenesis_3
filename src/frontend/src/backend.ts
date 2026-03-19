@@ -162,6 +162,14 @@ export interface TopLandEntry {
     principal: Principal;
     tokenBalance: bigint;
     plotName: string;
+    biome: string;
+    landId: bigint;
+}
+
+export interface PublicLandInfo {
+    landId: bigint;
+    biome: string;
+    principal: Principal;
 }
 
 export interface backendInterface {
@@ -195,6 +203,7 @@ export interface backendInterface {
     getAllActiveProposals(): Promise<unknown[]>;
     createProposal(args: { title: string; description: string }): Promise<bigint>;
     vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
+    getAllLandsPublic(): Promise<PublicLandInfo[]>;
 }
 
 function fromCandidOpt<T>(opt: [] | [T]): Option<T> {
@@ -307,6 +316,7 @@ export class Backend implements backendInterface {
     async getAllActiveProposals(): Promise<unknown[]> { return []; }
     async createProposal(_args: { title: string; description: string }): Promise<bigint> { return 0n; }
     async vote(_args: { proposalId: bigint; choice: boolean }): Promise<unknown> { return null; }
+    async getAllLandsPublic(): Promise<PublicLandInfo[]> { return (this.actor as any).getAllLandsPublic(); }
 }
 export interface CreateActorOptions {
     agent?: Agent;

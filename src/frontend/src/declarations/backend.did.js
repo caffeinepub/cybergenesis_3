@@ -42,6 +42,11 @@ export const Modifier = IDL.Record({
   'rarity_tier' : IDL.Nat,
   'multiplier_value' : IDL.Float64,
 });
+export const PublicLandInfo = IDL.Record({
+  'landId' : IDL.Nat,
+  'biome' : IDL.Text,
+  'principal' : IDL.Principal,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -94,6 +99,8 @@ export const TopLandEntry = IDL.Record({
   'principal' : IDL.Principal,
   'tokenBalance' : IDL.Nat,
   'plotName' : IDL.Text,
+  'biome' : IDL.Text,
+  'landId' : IDL.Nat,
 });
 export const http_header = IDL.Record({
   'value' : IDL.Text,
@@ -133,6 +140,7 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'claimRewards' : IDL.Func([IDL.Nat], [ClaimResult], []),
   'discoverLootCache' : IDL.Func([IDL.Nat], [DiscoverCacheResult], []),
+  'getAllLandsPublic' : IDL.Func([], [IDL.Vec(PublicLandInfo)], ['query']),
   'getAllModifiers' : IDL.Func([], [IDL.Vec(Modifier)], ['query']),
   'getAssetCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
@@ -151,6 +159,7 @@ export const idlService = IDL.Service({
   'getModifiersByTier' : IDL.Func([IDL.Nat], [IDL.Vec(Modifier)], ['query']),
   'getMyLootCaches' : IDL.Func([], [IDL.Vec(LootCache)], ['query']),
   'getMyModifications' : IDL.Func([], [IDL.Vec(Modification)], ['query']),
+  'getMyModifierInventory' : IDL.Func([], [IDL.Vec(ModifierInstance)], ['query']),
   'getTopLands' : IDL.Func([IDL.Nat], [IDL.Vec(TopLandEntry)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -161,11 +170,13 @@ export const idlService = IDL.Service({
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'mintLand' : IDL.Func([], [LandData], []),
   'processCache' : IDL.Func([IDL.Nat], [ModifierInstance], []),
+  'removeModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setGovernanceCanister' : IDL.Func([IDL.Principal], [], []),
   'setMarketplaceCanister' : IDL.Func([IDL.Principal], [], []),
   'setTokenCanister' : IDL.Func([IDL.Principal], [], []),
   'transferLand' : IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
+  'transferModifier' : IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Bool], []),
   'transform' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
@@ -210,6 +221,11 @@ export const idlFactory = ({ IDL }) => {
     'mod_id' : IDL.Nat,
     'rarity_tier' : IDL.Nat,
     'multiplier_value' : IDL.Float64,
+  });
+  const PublicLandInfo = IDL.Record({
+    'landId' : IDL.Nat,
+    'biome' : IDL.Text,
+    'principal' : IDL.Principal,
   });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
@@ -263,6 +279,8 @@ export const idlFactory = ({ IDL }) => {
     'principal' : IDL.Principal,
     'tokenBalance' : IDL.Nat,
     'plotName' : IDL.Text,
+    'biome' : IDL.Text,
+    'landId' : IDL.Nat,
   });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
@@ -302,6 +320,7 @@ export const idlFactory = ({ IDL }) => {
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'claimRewards' : IDL.Func([IDL.Nat], [ClaimResult], []),
     'discoverLootCache' : IDL.Func([IDL.Nat], [DiscoverCacheResult], []),
+    'getAllLandsPublic' : IDL.Func([], [IDL.Vec(PublicLandInfo)], ['query']),
     'getAllModifiers' : IDL.Func([], [IDL.Vec(Modifier)], ['query']),
     'getAssetCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
@@ -320,6 +339,7 @@ export const idlFactory = ({ IDL }) => {
     'getModifiersByTier' : IDL.Func([IDL.Nat], [IDL.Vec(Modifier)], ['query']),
     'getMyLootCaches' : IDL.Func([], [IDL.Vec(LootCache)], ['query']),
     'getMyModifications' : IDL.Func([], [IDL.Vec(Modification)], ['query']),
+    'getMyModifierInventory' : IDL.Func([], [IDL.Vec(ModifierInstance)], ['query']),
     'getTopLands' : IDL.Func([IDL.Nat], [IDL.Vec(TopLandEntry)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -330,11 +350,13 @@ export const idlFactory = ({ IDL }) => {
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'mintLand' : IDL.Func([], [LandData], []),
     'processCache' : IDL.Func([IDL.Nat], [ModifierInstance], []),
+    'removeModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setGovernanceCanister' : IDL.Func([IDL.Principal], [], []),
     'setMarketplaceCanister' : IDL.Func([IDL.Principal], [], []),
     'setTokenCanister' : IDL.Func([IDL.Principal], [], []),
     'transferLand' : IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
+    'transferModifier' : IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Bool], []),
     'transform' : IDL.Func(
         [TransformationInput],
         [TransformationOutput],

@@ -9,6 +9,7 @@ import {
   useRemoveModifier,
   useUpgradePlot,
 } from "@/hooks/useQueries";
+import { useTokenActor } from "@/hooks/useTokenActor";
 import { formatTokenBalance } from "@/lib/tokenUtils";
 import {
   BatteryCharging,
@@ -59,6 +60,7 @@ export default function LandDashboard({
   } = useGetTokenBalance();
   const { data: modifierInventory, isLoading: inventoryLoading } =
     useGetModifierInventory();
+  const { isFetching: tokenIsFetching } = useTokenActor();
   const claimRewardsMutation = useClaimRewards();
   const upgradePlotMutation = useUpgradePlot();
   const applyModifierMutation = useApplyModifier();
@@ -258,7 +260,7 @@ export default function LandDashboard({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {balanceLoading ? (
+          {balanceLoading && tokenIsFetching ? (
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-[#00ff41]" />
               <span className="text-white/70 font-jetbrains">

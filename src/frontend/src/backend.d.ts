@@ -1,5 +1,11 @@
 import type { Principal } from "@icp-sdk/core/principal";
 
+export interface PublicLandInfo {
+  landId: bigint;
+  biome: string;
+  principal: Principal;
+}
+
 export interface Some<T> {
   __kind__: "Some";
   value: T;
@@ -70,6 +76,8 @@ export interface TopLandEntry {
   principal: Principal;
   tokenBalance: bigint;
   plotName: string;
+  biome: string;
+  landId: bigint;
 }
 
 export interface UserProfile {
@@ -114,4 +122,5 @@ export interface backendInterface {
   getAllActiveProposals(): Promise<unknown[]>;
   createProposal(args: { title: string; description: string }): Promise<bigint>;
   vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
+  getAllLandsPublic(): Promise<PublicLandInfo[]>;
 }

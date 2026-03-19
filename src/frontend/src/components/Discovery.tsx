@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useActor } from "@/hooks/useActor";
 import { useGetLandData, useGetTokenBalance } from "@/hooks/useQueries";
+import { useTokenActor } from "@/hooks/useTokenActor";
 import { formatTokenBalance } from "@/lib/tokenUtils";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clock, Gift, Loader2, Package, Sparkles, Zap } from "lucide-react";
+import { Clock, Loader2, Package, Sparkles, Zap } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { PLANNED_MODIFIER_CATALOG } from "../data/modifierCatalog";
@@ -36,6 +37,7 @@ export default function Discovery() {
     isLoading: balanceLoading,
     error: balanceError,
   } = useGetTokenBalance();
+  const { isFetching: tokenIsFetching } = useTokenActor();
 
   const [caches, setCaches] = useState<LootCache[]>([]);
   const [cachesLoading, setCachesLoading] = useState(false);
@@ -167,45 +169,44 @@ export default function Discovery() {
     switch (tier) {
       case 1:
         return {
-          name: "COMMON CACHE",
+          rarityLabel: "COMMON",
           color: "text-[#00ffff]",
           glow: "box-glow-cyan",
           borderColor: "border-[#00ffff]/30",
+          iconSrc: "/assets/uploads/common_cache-3.webp",
+          iconGlow: "drop-shadow(0 0 14px rgba(0,255,255,0.9))",
+          pulseColor: "rgba(0,255,255,0.5)",
         };
       case 2:
         return {
-          name: "RARE CACHE",
+          rarityLabel: "RARE",
           color: "text-blue-400",
           glow: "box-glow-cyan",
           borderColor: "border-blue-400/30",
+          iconSrc: "/assets/uploads/rare_cache-1.webp",
+          iconGlow: "drop-shadow(0 0 14px rgba(96,165,250,0.9))",
+          pulseColor: "rgba(96,165,250,0.5)",
         };
       case 3:
         return {
-          name: "LEGENDARY CACHE",
+          rarityLabel: "LEGENDARY",
           color: "text-[#9933ff]",
           glow: "box-glow-purple",
           borderColor: "border-[#9933ff]/30",
+          iconSrc: "/assets/uploads/legendary_cache-2.webp",
+          iconGlow: "drop-shadow(0 0 18px rgba(153,51,255,1))",
+          pulseColor: "rgba(153,51,255,0.55)",
         };
       default:
         return {
-          name: "CACHE",
+          rarityLabel: "CACHE",
           color: "text-white",
           glow: "",
           borderColor: "border-white/30",
+          iconSrc: "",
+          iconGlow: "",
+          pulseColor: "rgba(255,255,255,0.2)",
         };
-    }
-  };
-
-  const getTierName = (tier: number) => {
-    switch (tier) {
-      case 1:
-        return "Common";
-      case 2:
-        return "Rare";
-      case 3:
-        return "Legendary";
-      default:
-        return "Unknown";
     }
   };
 
@@ -239,6 +240,14 @@ export default function Discovery() {
 
   return (
     <div className="space-y-6">
+      <style>{`
+        @keyframes cache-pulse-glow {
+          0%   { opacity: 0.45; transform: scale(0.85); }
+          50%  { opacity: 0.9;  transform: scale(1.05); }
+          100% { opacity: 0.45; transform: scale(0.85); }
+        }
+      `}</style>
+
       {/* CBR BALANCE */}
       <Card className="glassmorphism neon-border box-glow-green">
         <CardHeader>
@@ -248,7 +257,7 @@ export default function Discovery() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {balanceLoading ? (
+          {balanceLoading && tokenIsFetching ? (
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-[#00ff41]" />
               <span className="text-white/70 font-jetbrains">
@@ -283,13 +292,55 @@ export default function Discovery() {
               key={tier}
               className={`glassmorphism neon-border ${cfg.glow}`}
             >
-              <CardHeader>
-                <CardTitle className={`${cfg.color} font-orbitron`}>
-                  {cfg.name}
-                </CardTitle>
+              <CardHeader className="pb-0 pt-0 px-4">
+                {/* Title row: rarity label left + cache icon right */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col leading-tight">
+                    <span
+                      className={`${cfg.color} font-orbitron font-bold text-base tracking-wider`}
+                    >
+                      {cfg.rarityLabel}
+                    </span>
+                    <span
+                      className={`${cfg.color} font-orbitron font-semibold text-sm tracking-wider opacity-80`}
+                    >
+                      CACHE
+                    </span>
+                  </div>
+                  {cfg.iconSrc && (
+                    <div className="relative flex-shrink-0 w-[130px] h-[130px]">
+                      {/* Pulsating bloom glow behind image */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: "-8px",
+                          borderRadius: "50%",
+                          background: `radial-gradient(circle, ${cfg.pulseColor} 0%, transparent 70%)`,
+                          filter: "blur(10px)",
+                          animation:
+                            "cache-pulse-glow 2.4s ease-in-out infinite",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <img
+                        src={cfg.iconSrc}
+                        alt={`${cfg.rarityLabel} Cache`}
+                        style={{
+                          position: "relative",
+                          zIndex: 1,
+                          width: "130px",
+                          height: "130px",
+                          objectFit: "contain",
+                          filter: cfg.iconGlow,
+                          background: "none",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
+              <CardContent className="space-y-0.5 pt-0 pb-0 px-4">
+                <div className="space-y-1">
                   <p className="text-white/50 text-sm font-jetbrains">
                     Cost:{" "}
                     <span className="text-[#00ff41] font-bold font-jetbrains">
@@ -302,18 +353,12 @@ export default function Discovery() {
                       {tier === 1 ? "200" : tier === 2 ? "500" : "1000"}
                     </span>
                   </p>
-                  <p className="text-white/50 text-sm font-jetbrains">
-                    LandToken Chance:{" "}
-                    <span className="text-[#9933ff] font-bold font-jetbrains">
-                      {tier === 1 ? "0.05%" : tier === 2 ? "0.2%" : "0.5%"}
-                    </span>
-                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDiscoverCache(tier)}
                   disabled={discoveringTier !== null || !selectedLand}
-                  className="w-full px-4 py-3 rounded-lg btn-gradient-green text-black font-bold font-orbitron disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-1.5 rounded-lg btn-gradient-green text-black font-bold font-orbitron disabled:opacity-50 disabled:cursor-not-allowed"
                   data-ocid={`discovery.discover_cache_button.${tier}`}
                 >
                   {discoveringTier === tier ? (
@@ -413,55 +458,77 @@ export default function Discovery() {
               No caches discovered
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {caches.map((cache, idx) => {
                 const tier = Number(cache.tier);
                 const cfg = getTierConfig(tier);
+                const isOpened = cache.is_opened;
+                const isProcessing = processingCacheId === cache.cache_id;
+                const canOpen = canOpenCache(cache);
+
                 return (
                   <div
                     key={cache.cache_id.toString()}
-                    className={`glassmorphism rounded-lg p-4 border ${cfg.borderColor}`}
+                    className={`glassmorphism rounded-lg p-3 border ${cfg.borderColor} flex items-center gap-3`}
                     data-ocid={`my_caches.item.${idx + 1}`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-white font-medium font-jetbrains">
-                          {getTierName(tier)} Cache #{cache.cache_id.toString()}
-                        </p>
-                        <p className="text-white/50 text-sm flex items-center gap-1 font-jetbrains">
-                          <Clock className="w-3 h-3" />
-                          {cache.is_opened ? "Opened" : getTimeRemaining(cache)}
-                        </p>
-                      </div>
-                      <div>
-                        {cache.is_opened ? (
-                          <span className="text-green-400 text-sm font-jetbrains">
-                            ✓ Opened
-                          </span>
-                        ) : (
-                          <Button
-                            onClick={() => handleProcessCache(cache.cache_id)}
-                            disabled={
-                              !canOpenCache(cache) || processingCacheId !== null
-                            }
-                            size="sm"
-                            className="bg-[#00ff41] hover:bg-[#00ff41]/80 text-black font-bold font-orbitron"
-                            data-ocid={`my_caches.open_button.${idx + 1}`}
-                          >
-                            {processingCacheId === cache.cache_id ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                Opening...
-                              </>
-                            ) : (
-                              <>
-                                <Gift className="w-4 h-4 mr-2" />
-                                OPEN
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
+                    {/* Left: icon + rarity label */}
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      {cfg.iconSrc && (
+                        <img
+                          src={cfg.iconSrc}
+                          alt={cfg.rarityLabel}
+                          style={{
+                            width: "72px",
+                            height: "72px",
+                            objectFit: "contain",
+                            filter: cfg.iconGlow,
+                            background: "none",
+                          }}
+                        />
+                      )}
+                      <span
+                        className={`${cfg.color} font-orbitron text-xs tracking-wider font-bold`}
+                      >
+                        {cfg.rarityLabel}
+                      </span>
+                    </div>
+
+                    {/* Middle: cache ID + status */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/70 font-jetbrains text-sm">
+                        #{cache.cache_id.toString()}
+                      </p>
+                      <p className="text-white/50 text-xs flex items-center gap-1 font-jetbrains">
+                        <Clock className="w-3 h-3" />
+                        {isOpened ? "Opened" : getTimeRemaining(cache)}
+                      </p>
+                    </div>
+
+                    {/* Right: OPEN button or opened indicator */}
+                    <div className="flex-shrink-0">
+                      {isOpened ? (
+                        <span className="text-green-400 text-sm font-jetbrains">
+                          ✓ Opened
+                        </span>
+                      ) : (
+                        <Button
+                          onClick={() => handleProcessCache(cache.cache_id)}
+                          disabled={!canOpen || processingCacheId !== null}
+                          size="sm"
+                          className="bg-[#00ff41] hover:bg-[#00ff41]/80 text-black font-bold font-orbitron text-xs px-3 py-1.5 rounded"
+                          data-ocid={`my_caches.open_button.${idx + 1}`}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              Opening...
+                            </>
+                          ) : (
+                            "OPEN"
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

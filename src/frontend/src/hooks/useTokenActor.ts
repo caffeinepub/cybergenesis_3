@@ -6,9 +6,9 @@ import { useInternetIdentity } from "./useInternetIdentity";
 
 const MAX_RETRIES = 25;
 const RETRY_DELAYS = [
-  1000, 1000, 2000, 2000, 3000, 3000, 5000, 5000, 7000, 7000, 10000, 10000,
-  15000, 15000, 20000, 20000, 25000, 25000, 30000, 30000, 35000, 35000, 40000,
-  40000, 45000,
+  500, 500, 2000, 2000, 3000, 3000, 5000, 5000, 7000, 7000, 10000, 10000, 15000,
+  15000, 20000, 20000, 25000, 25000, 30000, 30000, 35000, 35000, 40000, 40000,
+  45000,
 ];
 const ACTOR_TIMEOUT = 120000; // 120 seconds (maximum recommended)
 
@@ -49,14 +49,32 @@ async function selectOptimalGateway(
 }
 
 export function useTokenActor() {
-  const { identity, isInitializing } = useInternetIdentity();
+  const { identity } = useInternetIdentity();
   const [actor, setActor] = useState<tokenBackendInterface | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isInitializingRef = useRef(false);
 
+  // Hard 8-second failsafe: if actor still null after 8s, stop loading
   useEffect(() => {
-    if (isInitializingRef.current || isInitializing) {
+    const failsafe = setTimeout(() => {
+      setIsFetching((prev) => {
+        if (prev) {
+          console.warn(
+            "[CyberToken Actor] 8s failsafe: canister unavailable, stopping loading",
+          );
+          return false;
+        }
+        return prev;
+      });
+    }, 8000);
+    return () => clearTimeout(failsafe);
+  }, []);
+
+  useEffect(() => {
+    // Removed isInitializing guard — icrc1_balance_of is a read-only query
+    // that doesn't require identity. Actor will re-initialize when identity loads.
+    if (isInitializingRef.current) {
       return;
     }
 
@@ -162,7 +180,7 @@ export function useTokenActor() {
     };
 
     initActorWithRetry();
-  }, [identity, isInitializing]);
+  }, [identity]);
 
   return {
     actor,

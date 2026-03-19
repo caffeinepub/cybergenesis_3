@@ -440,9 +440,8 @@ export function useGetModifierInventory() {
     queryKey: ["modifierInventory"],
     queryFn: async () => {
       if (!actor) return [];
-      console.log("Fetching modifier inventory...");
-      console.warn("getMyModifierInventory not yet implemented in backend");
-      return [];
+      const result = await (actor as any).getMyModifierInventory();
+      return result ?? [];
     },
     enabled: !!actor && !isFetching,
     retry: 2,
@@ -545,7 +544,7 @@ export function useGetTopLands() {
     queryFn: async () => {
       if (!actor) return [];
       console.log("Fetching top lands...");
-      const result = await actor.getTopLands(BigInt(10));
+      const result = await actor.getTopLands(BigInt(25));
       console.log("Top lands fetched:", result);
       return result;
     },

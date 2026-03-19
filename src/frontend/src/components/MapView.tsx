@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useGetLandData } from "../hooks/useQueries";
 
 const MAP_SIZE = 2560;
 const RAW_MAP_URL = "/assets/uploads/IMG_0133-1.webp";
@@ -49,35 +50,41 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 function makeBeamIcon(L: any, color: string, isOwner: boolean) {
-  const [r, g, b] = hexToRgb(color);
   const h = isOwner ? 140 : 90;
-  const coreW = isOwner ? 4 : 2;
-  const glowW = isOwner ? 32 : 22;
-  const blurPx = isOwner ? 7 : 5;
+  const coreW = isOwner ? 2 : 1;
+  const glowW = isOwner ? 14 : 5;
+  const blurPx = isOwner ? 2 : 0;
+
+  const effectiveColor = isOwner ? color : "#FAD26A";
+  const [r, g, b] = hexToRgb(effectiveColor);
 
   const coreShadow = isOwner
-    ? `0 0 5px 2px rgba(${r},${g},${b},1), 0 0 14px 4px rgba(${r},${g},${b},0.8), 0 0 28px 6px rgba(${r},${g},${b},0.4)`
-    : `0 0 4px 1px rgba(${r},${g},${b},0.9), 0 0 10px 3px rgba(${r},${g},${b},0.6)`;
+    ? `0 0 3px 1px rgba(${r},${g},${b},1), 0 0 6px 2px rgba(${r},${g},${b},0.6)`
+    : "none";
 
   const html = `
     <div style="position:relative;width:${glowW}px;height:${h}px;pointer-events:none;">
-      <div style="
+      ${
+        isOwner
+          ? `<div style="
         position:absolute;
         left:50%;
         transform:translateX(-50%);
         width:${glowW}px;
         height:${h}px;
-        background:linear-gradient(to bottom,transparent 0%,rgba(${r},${g},${b},0.35) 40%,rgba(${r},${g},${b},0.65) 100%);
-        border-radius:${glowW / 2}px;
+        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.2) 55%,transparent 100%);
+        border-radius:${glowW / 2}px ${glowW / 2}px 2px 2px;
         filter:blur(${blurPx}px);
-      "></div>
+      "></div>`
+          : ""
+      }
       <div style="
         position:absolute;
         left:50%;
         transform:translateX(-50%);
         width:${coreW}px;
         height:${h}px;
-        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.55) 0%,rgba(${r},${g},${b},1) 100%);
+        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.9) 100%);
         border-radius:${coreW / 2}px;
         box-shadow:${coreShadow};
       "></div>
@@ -105,13 +112,17 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const { identity } = useInternetIdentity();
   const principalId = identity?.getPrincipal().toString() ?? null;
 
-  const { data: lands } = useQuery({
-    queryKey: ["landData"],
-    queryFn: () => actor?.getLandData(),
+  // Primary: owner's own lands
+  const { data: myLands } = useGetLandData();
+
+  // Secondary: all public lands for foreign beams
+  const { data: allLandsPublic } = useQuery({
+    queryKey: ["allLandsPublic"],
+    queryFn: () => actor?.getAllLandsPublic(),
     enabled: !!actor,
   });
 
-  // Failsafe: mark zoom ready after 6s in case lands never arrive
+  // Failsafe: mark zoom ready after 6s
   useEffect(() => {
     const t = setTimeout(() => setIsZoomReady(true), 6000);
     return () => clearTimeout(t);
@@ -143,18 +154,19 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     const map = L.map(mapContainerRef.current, {
       crs: L.CRS.Simple,
       minZoom: -2,
-      maxZoom: 2,
+      maxZoom: 1.0,
       zoomControl: false,
       attributionControl: false,
       maxBoundsViscosity: 1.0,
       inertia: true,
-      inertiaDeceleration: 400,
-      inertiaMaxSpeed: 6000,
-      easeLinearity: 0.1,
+      inertiaDeceleration: 300,
+      inertiaMaxSpeed: 800,
+      easeLinearity: 0.2,
       zoomAnimation: true,
       zoomAnimationThreshold: 4,
-      wheelPxPerZoomLevel: 35,
+      wheelPxPerZoomLevel: 60,
       scrollWheelZoom: false,
+      fadeAnimation: false,
     });
     const bounds: [[number, number], [number, number]] = [
       [0, 0],
@@ -165,7 +177,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     overlay.on("error", () => setIsImageLoaded(true));
     overlay.addTo(map);
     map.setMaxBounds(bounds);
-    map.fitBounds(bounds);
+    map.setView([MAP_SIZE / 2, MAP_SIZE / 2], -1, { animate: false });
     mapRef.current = map;
     beamLayerRef.current = L.layerGroup().addTo(map);
 
@@ -179,27 +191,35 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     updateMinZoom();
     window.addEventListener("resize", updateMinZoom);
 
-    // CSS acceleration hint for leaflet panes
+    // GPU hint for smooth panning
     const perfStyle = document.createElement("style");
-    perfStyle.textContent = ".leaflet-pane { will-change: transform; }";
+    perfStyle.textContent = `
+      .leaflet-pane { will-change: transform; }
+      .leaflet-zoom-animated { will-change: transform; }
+    `;
     document.head.appendChild(perfStyle);
 
-    // Smooth custom wheel zoom
     let zoomTarget = map.getZoom();
     let wheelTimer: ReturnType<typeof setTimeout> | null = null;
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta = e.deltaY < 0 ? 0.4 : -0.4;
+      const delta = e.deltaY < 0 ? 0.35 : -0.35;
       zoomTarget = Math.max(
         map.getMinZoom(),
         Math.min(map.getMaxZoom(), zoomTarget + delta),
       );
       if (wheelTimer) clearTimeout(wheelTimer);
       wheelTimer = setTimeout(() => {
+        // Use setZoomAround instead of flyTo — smoother at all zoom levels
+        // especially at far/full-screen zoom where flyTo causes micro-jitter
         const containerPoint = L.point(e.clientX, e.clientY);
         const latlng = map.containerPointToLatLng(containerPoint);
-        map.flyTo(latlng, zoomTarget, { duration: 0.35, easeLinearity: 0.1 });
-      }, 30);
+        map.setZoomAround(latlng, zoomTarget, {
+          animate: true,
+          duration: 0.25,
+        });
+      }, 35);
     };
     mapContainerRef.current?.addEventListener("wheel", onWheel, {
       passive: false,
@@ -218,34 +238,63 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
   }, [isEngineReady]);
 
-  // Draw beams + zoom to owner's land once
+  // Draw beams: foreign from allLandsPublic, owner from myLands fallback
   useEffect(() => {
     const map = mapRef.current;
     const beamLayer = beamLayerRef.current;
-    if (!isMapReady || !map || !beamLayer || !lands || !(window as any).L)
-      return;
+    if (!isMapReady || !map || !beamLayer || !(window as any).L) return;
+    if (!myLands && !allLandsPublic) return;
     const L = (window as any).L;
     beamLayer.clearLayers();
 
+    const renderedLandIds = new Set<number>();
     let myCoords: [number, number] | null = null;
-    try {
-      for (const land of lands as any[]) {
-        const coords = getPointInBiome(Number(land.landId), land.biome);
-        const isOwner =
-          principalId != null && land.principal?.toString() === principalId;
-        if (isOwner && !myCoords) myCoords = coords;
-        const color = BIOME_COLORS[land.biome] ?? "#8800ff";
-        L.marker(coords, { icon: makeBeamIcon(L, color, isOwner) }).addTo(
-          beamLayer,
-        );
+
+    // 1. All public lands
+    if (Array.isArray(allLandsPublic)) {
+      try {
+        for (const land of allLandsPublic as any[]) {
+          const id = Number(land.landId);
+          const coords = getPointInBiome(id, land.biome);
+          const isOwner =
+            principalId != null && land.principal?.toString() === principalId;
+          if (isOwner && !myCoords) myCoords = coords;
+          renderedLandIds.add(id);
+          const color = BIOME_COLORS[land.biome] ?? "#8800ff";
+          L.marker(coords, { icon: makeBeamIcon(L, color, isOwner) }).addTo(
+            beamLayer,
+          );
+        }
+      } catch (e) {
+        console.warn("[MapView] allLandsPublic beam render error:", e);
       }
-    } catch (e) {
-      console.warn("[MapView] beam render error:", e);
     }
 
+    // 2. Owner beam fallback from myLands
+    if (Array.isArray(myLands)) {
+      try {
+        for (const land of myLands as any[]) {
+          const id = Number(land.landId);
+          if (!renderedLandIds.has(id)) {
+            const coords = getPointInBiome(id, land.biome);
+            if (!myCoords) myCoords = coords;
+            const color = BIOME_COLORS[land.biome] ?? "#8800ff";
+            L.marker(coords, { icon: makeBeamIcon(L, color, true) }).addTo(
+              beamLayer,
+            );
+          } else if (!myCoords) {
+            myCoords = getPointInBiome(id, land.biome);
+          }
+        }
+      } catch (e) {
+        console.warn("[MapView] myLands beam render error:", e);
+      }
+    }
+
+    // 3. Zoom to owner's land once
     if (myCoords && !hasZoomedRef.current) {
       hasZoomedRef.current = true;
-      map.flyTo(myCoords, 1.5, {
+      map.flyTo(myCoords, -0.3, {
         animate: true,
         duration: 1.8,
         easeLinearity: 0.2,
@@ -254,7 +303,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     } else if (!myCoords) {
       setIsZoomReady(true);
     }
-  }, [lands, principalId, isMapReady]);
+  }, [allLandsPublic, myLands, principalId, isMapReady]);
 
   const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
 

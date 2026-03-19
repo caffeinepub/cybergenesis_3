@@ -41,7 +41,7 @@ export default function Governance() {
   const handleStake = async () => {
     const amount = Number.parseFloat(stakeAmount);
     if (Number.isNaN(amount) || amount <= 0) {
-      toast.error("Неверная сумма");
+      toast.error("Invalid amount");
       return;
     }
     try {
@@ -49,38 +49,37 @@ export default function Governance() {
       const result =
         await stakeTokensMutation.mutateAsync(amountInSmallestUnit);
       if (result.__kind__ === "success") {
-        toast.success("Токены успешно застейканы!", {
-          description: `Новый стейк: ${Number(result.success.newStake) / 100000000} CBR`,
+        toast.success("Tokens staked successfully!", {
+          description: `New stake: ${Number(result.success.newStake) / 100000000} CBR`,
         });
         setStakeAmount("");
       } else if (result.__kind__ === "insufficientTokens") {
-        toast.error("Недостаточно токенов", {
-          description: `Требуется: ${Number(result.insufficientTokens.required) / 100000000} CBR`,
+        toast.error("Insufficient tokens", {
+          description: `Required: ${Number(result.insufficientTokens.required) / 100000000} CBR`,
         });
       } else if (result.__kind__ === "transferFailed") {
-        toast.error("Перевод не удался", {
+        toast.error("Transfer failed", {
           description: result.transferFailed,
         });
       }
     } catch (error) {
-      toast.error("Не удалось застейкать токены", {
-        description:
-          error instanceof Error ? error.message : "Неизвестная ошибка",
+      toast.error("Failed to stake tokens", {
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
 
   const handleCreateProposal = async () => {
     if (!proposalTitle.trim() || !proposalDescription.trim()) {
-      toast.error("Пожалуйста, заполните все поля");
+      toast.error("Please fill in all fields");
       return;
     }
     if (proposalTitle.length > 100) {
-      toast.error("Заголовок должен быть не более 100 символов");
+      toast.error("Title must be 100 characters or less");
       return;
     }
     if (proposalDescription.length > 1000) {
-      toast.error("Описание должно быть не более 1000 символов");
+      toast.error("Description must be 1000 characters or less");
       return;
     }
     try {
@@ -88,15 +87,14 @@ export default function Governance() {
         title: proposalTitle,
         description: proposalDescription,
       });
-      toast.success("Предложение успешно создано!", {
-        description: `ID предложения: ${proposalId}`,
+      toast.success("Proposal created successfully!", {
+        description: `Proposal ID: ${proposalId}`,
       });
       setProposalTitle("");
       setProposalDescription("");
     } catch (error) {
-      toast.error("Не удалось создать предложение", {
-        description:
-          error instanceof Error ? error.message : "Неизвестная ошибка",
+      toast.error("Failed to create proposal", {
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
@@ -106,22 +104,21 @@ export default function Governance() {
     try {
       const result = await voteMutation.mutateAsync({ proposalId, choice });
       if (result.__kind__ === "success") {
-        toast.success("Голос записан!", {
-          description: `Вес голоса: ${Number(result.success.weight) / 100000000} CBR`,
+        toast.success("Vote recorded!", {
+          description: `Vote weight: ${Number(result.success.weight) / 100000000} CBR`,
         });
       } else if (result.__kind__ === "proposalNotFound") {
-        toast.error("Предложение не найдено");
+        toast.error("Proposal not found");
       } else if (result.__kind__ === "proposalNotActive") {
-        toast.error("Предложение больше не активно");
+        toast.error("Proposal is no longer active");
       } else if (result.__kind__ === "alreadyVoted") {
-        toast.error("Вы уже проголосовали за это предложение");
+        toast.error("You have already voted on this proposal");
       } else if (result.__kind__ === "notStaker") {
-        toast.error("Вы должны застейкать токены для голосования");
+        toast.error("You must stake tokens to vote");
       }
     } catch (error) {
-      toast.error("Не удалось проголосовать", {
-        description:
-          error instanceof Error ? error.message : "Неизвестная ошибка",
+      toast.error("Failed to vote", {
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {
       setVotingProposalId(null);
@@ -144,10 +141,10 @@ export default function Governance() {
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="font-orbitron text-3xl font-bold text-glow-teal">
-          УПРАВЛЕНИЕ
+          GOVERNANCE
         </h2>
         <p className="font-jetbrains text-muted-foreground">
-          Стейкайте токены и участвуйте в принятии решений проекта
+          Stake tokens and participate in project governance decisions
         </p>
       </div>
 
@@ -155,15 +152,15 @@ export default function Governance() {
         <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 glassmorphism">
           <TabsTrigger value="stake" className="font-orbitron">
             <Coins className="mr-2 h-4 w-4" />
-            Стейкинг
+            Staking
           </TabsTrigger>
           <TabsTrigger value="proposals" className="font-orbitron">
             <Vote className="mr-2 h-4 w-4" />
-            Предложения
+            Proposals
           </TabsTrigger>
           <TabsTrigger value="create" className="font-orbitron">
             <FileText className="mr-2 h-4 w-4" />
-            Создать
+            Create
           </TabsTrigger>
         </TabsList>
 
@@ -171,7 +168,7 @@ export default function Governance() {
           <Card className="glassmorphism border-primary/20 max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="font-orbitron text-xl text-glow-teal">
-                Стейкинг токенов CBR
+                CBR Token Staking
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -179,15 +176,15 @@ export default function Governance() {
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <p className="font-jetbrains text-sm text-muted-foreground">
-                    Застейкайте свои токены CBR, чтобы получить право голоса в
-                    предложениях по управлению. Вес вашего голоса пропорционален
-                    вашей застейканной сумме.
+                    Stake your CBR tokens to gain voting rights on governance
+                    proposals. Your vote weight is proportional to your staked
+                    amount.
                   </p>
                 </div>
               </div>
               <div className="space-y-4 font-jetbrains">
                 <div className="flex justify-between p-4 glassmorphism rounded-lg">
-                  <span className="text-muted-foreground">Текущий стейк:</span>
+                  <span className="text-muted-foreground">Current stake:</span>
                   <span className="text-xl font-bold text-glow-yellow">
                     {stakingLoading ? (
                       <Loader2 className="h-5 w-5 animate-spin inline" />
@@ -198,7 +195,7 @@ export default function Governance() {
                 </div>
                 <div className="flex justify-between p-4 glassmorphism rounded-lg">
                   <span className="text-muted-foreground">
-                    Доступный баланс:
+                    Available balance:
                   </span>
                   <span className="text-xl font-bold text-primary">
                     {Number(tokenBalance || 0n) / 100000000} CBR
@@ -211,7 +208,7 @@ export default function Governance() {
                     htmlFor="staking-amount"
                     className="font-jetbrains text-sm text-muted-foreground mb-2 block"
                   >
-                    Сумма для стейкинга (CBR)
+                    Amount to stake (CBR)
                   </label>
                   <Input
                     id="staking-amount"
@@ -232,12 +229,12 @@ export default function Governance() {
                   {stakeTokensMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Стейкинг...
+                      Staking...
                     </>
                   ) : (
                     <>
                       <Coins className="mr-2 h-4 w-4" />
-                      ЗАСТЕЙКАТЬ ТОКЕНЫ
+                      STAKE TOKENS
                     </>
                   )}
                 </Button>
@@ -258,10 +255,10 @@ export default function Governance() {
                   <Vote className="h-12 w-12 text-muted-foreground mx-auto" />
                   <div>
                     <h3 className="font-orbitron text-xl text-glow-teal mb-2">
-                      Нет активных предложений
+                      No active proposals
                     </h3>
                     <p className="font-jetbrains text-muted-foreground">
-                      Будьте первым, кто создаст предложение
+                      Be the first to create a proposal
                     </p>
                   </div>
                 </div>
@@ -298,18 +295,18 @@ export default function Governance() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs font-jetbrains text-muted-foreground">
                           <span>
-                            Всего голосов: {(totalVotes / 100000000).toFixed(2)}{" "}
+                            Total votes: {(totalVotes / 100000000).toFixed(2)}{" "}
                             CBR
                           </span>
                           <span>
-                            {percentages.yes.toFixed(1)}% ЗА /{" "}
-                            {percentages.no.toFixed(1)}% ПРОТИВ
+                            {percentages.yes.toFixed(1)}% FOR /{" "}
+                            {percentages.no.toFixed(1)}% AGAINST
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-4 font-jetbrains text-sm">
                           <div className="p-3 glassmorphism rounded-lg border border-green-500/20 box-glow-green">
                             <div className="text-green-400 font-bold">
-                              ЗА:{" "}
+                              FOR:{" "}
                               {(Number(proposal.votesYes) / 100000000).toFixed(
                                 2,
                               )}
@@ -317,7 +314,7 @@ export default function Governance() {
                           </div>
                           <div className="p-3 glassmorphism rounded-lg border border-red-500/20">
                             <div className="text-red-400 font-bold">
-                              ПРОТИВ:{" "}
+                              AGAINST:{" "}
                               {(Number(proposal.votesNo) / 100000000).toFixed(
                                 2,
                               )}
@@ -336,7 +333,7 @@ export default function Governance() {
                           ) : (
                             <>
                               <ThumbsUp className="mr-2 h-4 w-4" />
-                              ЗА
+                              FOR
                             </>
                           )}
                         </Button>
@@ -350,7 +347,7 @@ export default function Governance() {
                           ) : (
                             <>
                               <ThumbsDown className="mr-2 h-4 w-4" />
-                              ПРОТИВ
+                              AGAINST
                             </>
                           )}
                         </Button>
@@ -367,7 +364,7 @@ export default function Governance() {
           <Card className="glassmorphism border-primary/20 max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="font-orbitron text-xl text-glow-teal">
-                Создать предложение
+                Create Proposal
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -375,9 +372,8 @@ export default function Governance() {
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <p className="font-jetbrains text-sm text-muted-foreground">
-                    Вы должны иметь застейканные токены для создания
-                    предложений. Предложения позволяют сообществу голосовать по
-                    важным решениям проекта.
+                    You must have staked tokens to create proposals. Proposals
+                    allow the community to vote on important project decisions.
                   </p>
                 </div>
               </div>
@@ -386,13 +382,13 @@ export default function Governance() {
                   htmlFor="proposal-title"
                   className="font-jetbrains text-sm text-muted-foreground mb-2 block"
                 >
-                  Заголовок (макс. 100 символов)
+                  Title (max 100 characters)
                 </label>
                 <Input
                   id="proposal-title"
                   value={proposalTitle}
                   onChange={(e) => setProposalTitle(e.target.value)}
-                  placeholder="Введите заголовок предложения"
+                  placeholder="Enter proposal title"
                   className="font-jetbrains"
                   maxLength={100}
                 />
@@ -405,13 +401,13 @@ export default function Governance() {
                   htmlFor="proposal-description"
                   className="font-jetbrains text-sm text-muted-foreground mb-2 block"
                 >
-                  Описание (макс. 1000 символов)
+                  Description (max 1000 characters)
                 </label>
                 <Textarea
                   id="proposal-description"
                   value={proposalDescription}
                   onChange={(e) => setProposalDescription(e.target.value)}
-                  placeholder="Опишите ваше предложение подробно"
+                  placeholder="Describe your proposal in detail"
                   className="font-jetbrains min-h-[150px]"
                   maxLength={1000}
                 />
@@ -431,12 +427,12 @@ export default function Governance() {
                 {createProposalMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Создание...
+                    Creating...
                   </>
                 ) : (
                   <>
                     <FileText className="mr-2 h-4 w-4" />
-                    СОЗДАТЬ ПРЕДЛОЖЕНИЕ
+                    CREATE PROPOSAL
                   </>
                 )}
               </Button>

@@ -101,9 +101,9 @@ function KeyLightSync() {
   useFrame(({ camera }) => {
     if (keyLightRef.current) {
       keyLightRef.current.position.set(
-        camera.position.x + 10,
-        camera.position.y + 15,
-        camera.position.z + 10,
+        camera.position.x + -10,
+        camera.position.y + 20,
+        camera.position.z + -25,
       );
     }
   });
@@ -112,7 +112,7 @@ function KeyLightSync() {
     <directionalLight
       ref={keyLightRef}
       name="KeyLight"
-      intensity={Math.PI * 0.8}
+      intensity={Math.PI * 1.0}
       color="#ffffff"
     />
   );
@@ -123,9 +123,9 @@ function SunLightSync() {
     <directionalLight
       ref={sunLightRef}
       name="SunLight"
-      position={[-10, 20, -15]}
+      position={[5, 12, 25]}
       intensity={Math.PI * 0.4}
-      color="#ffe4b5"
+      color="#ffecd4"
     />
   );
 }
