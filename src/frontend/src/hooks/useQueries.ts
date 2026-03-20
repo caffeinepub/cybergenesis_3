@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
+import { useMarketplaceActor } from "./useMarketplaceActor";
 import { useTokenActor } from "./useTokenActor";
 
 // Placeholder types for governance and marketplace (not yet in backend)
@@ -170,13 +171,11 @@ export function useSaveCallerUserProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
-      toast.success("Профиль сохранен");
+      toast.success("Profile saved");
     },
     onError: (error: any) => {
       console.error("Profile save error:", error);
-      toast.error(
-        `Ошибка сохранения профиля: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Profile save error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -236,7 +235,7 @@ export function useDebugTokenBalance() {
 
       const principal = identity.getPrincipal();
       console.log(
-        "🔍 Debug: Fetching CBR balance for Principal:",
+        "\uD83D\uDD0D Debug: Fetching CBR balance for Principal:",
         principal.toString(),
       );
 
@@ -245,19 +244,20 @@ export function useDebugTokenBalance() {
         subaccount: [],
       });
 
-      console.log("🔍 Debug: Raw balance response:", balance);
-      console.log("🔍 Debug: Formatted balance:", formatTokenBalance(balance));
+      console.log("\uD83D\uDD0D Debug: Raw balance response:", balance);
+      console.log(
+        "\uD83D\uDD0D Debug: Formatted balance:",
+        formatTokenBalance(balance),
+      );
 
       return balance;
     },
     onSuccess: (balance) => {
-      toast.success(`Баланс обновлен: ${formatTokenBalance(balance)} CBR`);
+      toast.success(`Balance updated: ${formatTokenBalance(balance)} CBR`);
     },
     onError: (error: any) => {
-      console.error("🔍 Debug: Balance fetch failed:", error);
-      toast.error(
-        `Ошибка получения баланса: ${error.message || "Неизвестная ошибка"}`,
-      );
+      console.error("\uD83D\uDD0D Debug: Balance fetch failed:", error);
+      toast.error(`Balance fetch error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -308,25 +308,31 @@ export function useDebugCanisterBalance() {
         throw new Error("Token actor not available");
       }
 
-      console.log("🔍 Debug: Fetching canister token balance...");
+      console.log("\uD83D\uDD0D Debug: Fetching canister token balance...");
 
       const balance = await tokenActor.getCanisterTokenBalance();
 
-      console.log("🔍 Debug: Raw canister balance response:", balance);
       console.log(
-        "🔍 Debug: Formatted canister balance:",
+        "\uD83D\uDD0D Debug: Raw canister balance response:",
+        balance,
+      );
+      console.log(
+        "\uD83D\uDD0D Debug: Formatted canister balance:",
         formatTokenBalance(balance),
       );
 
       return balance;
     },
     onSuccess: (balance) => {
-      toast.success(`Баланс контракта: ${formatTokenBalance(balance)} CBR`);
+      toast.success(`Contract balance: ${formatTokenBalance(balance)} CBR`);
     },
     onError: (error: any) => {
-      console.error("🔍 Debug: Canister balance fetch failed:", error);
+      console.error(
+        "\uD83D\uDD0D Debug: Canister balance fetch failed:",
+        error,
+      );
       toast.error(
-        `Ошибка получения баланса контракта: ${error.message || "Неизвестная ошибка"}`,
+        `Contract balance error: ${error.message || "Unknown error"}`,
       );
     },
   });
@@ -349,13 +355,11 @@ export function useClaimRewards() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       queryClient.invalidateQueries({ queryKey: ["landData"] });
       queryClient.invalidateQueries({ queryKey: ["tokenBalance"] });
-      toast.success("Награды получены!");
+      toast.success("Rewards claimed!");
     },
     onError: (error: any) => {
       console.error("Claim rewards error:", error);
-      toast.error(
-        `Ошибка получения наград: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Claim error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -377,11 +381,11 @@ export function useUpgradePlot() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       queryClient.invalidateQueries({ queryKey: ["landData"] });
       queryClient.invalidateQueries({ queryKey: ["tokenBalance"] });
-      toast.success("Участок улучшен!");
+      toast.success("Plot upgraded!");
     },
     onError: (error: any) => {
       console.error("Upgrade plot error:", error);
-      toast.error(`Ошибка улучшения: ${error.message || "Неизвестная ошибка"}`);
+      toast.error(`Upgrade error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -398,13 +402,11 @@ export function useUpdatePlotName() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["landData"] });
-      toast.success("Название обновлено");
+      toast.success("Name updated");
     },
     onError: (error: any) => {
       console.error("Update plot name error:", error);
-      toast.error(
-        `Ошибка обновления названия: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Name update error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -421,12 +423,12 @@ export function useUpdateDecoration() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["landData"] });
-      toast.success("Декорация обновлена");
+      toast.success("Decoration updated");
     },
     onError: (error: any) => {
       console.error("Update decoration error:", error);
       toast.error(
-        `Ошибка обновления декорации: ${error.message || "Неизвестная ошибка"}`,
+        `Decoration update error: ${error.message || "Unknown error"}`,
       );
     },
   });
@@ -465,13 +467,14 @@ export function useApplyModifier() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["landData"] });
       queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
-      toast.success("Модификатор применен!");
+      // PATH B: reactive update — installed mods change land state visible in marketplace
+      queryClient.invalidateQueries({ queryKey: ["activeListings"] });
+      queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      toast.success("Modifier applied!");
     },
     onError: (error: any) => {
       console.error("Apply modifier error:", error);
-      toast.error(
-        `Ошибка применения модификатора: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Modifier apply error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -498,13 +501,14 @@ export function useRemoveModifier() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["landData"] });
       queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
-      toast.success("Модификатор снят с земли!");
+      // PATH B: reactive update — removing a mod instantly updates marketplace listings
+      queryClient.invalidateQueries({ queryKey: ["activeListings"] });
+      queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      toast.success("Modifier removed from land!");
     },
     onError: (error: any) => {
       console.error("Remove modifier error:", error);
-      toast.error(
-        `Ошибка снятия модификатора: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Modifier remove error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -524,13 +528,11 @@ export function useMintLand() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["landData"] });
-      toast.success("Новая земля создана!");
+      toast.success("New land created!");
     },
     onError: (error: any) => {
       console.error("Mint land error:", error);
-      toast.error(
-        `Ошибка создания земли: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Land creation error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -590,11 +592,11 @@ export function useStakeTokens() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stakedBalance"] });
-      toast.success("Токены застейканы!");
+      toast.success("Tokens staked!");
     },
     onError: (error: any) => {
       console.error("Stake tokens error:", error);
-      toast.error(`Ошибка стейкинга: ${error.message || "Неизвестная ошибка"}`);
+      toast.error(`Staking error: ${error.message || "Unknown error"}`);
     },
   });
 }
@@ -623,12 +625,12 @@ export function useCreateProposal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeProposals"] });
-      toast.success("Предложение создано!");
+      toast.success("Proposal created!");
     },
     onError: (error: any) => {
       console.error("Create proposal error:", error);
       toast.error(
-        `Ошибка создания предложения: ${error.message || "Неизвестная ошибка"}`,
+        `Proposal creation error: ${error.message || "Unknown error"}`,
       );
     },
   });
@@ -651,30 +653,44 @@ export function useVote() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeProposals"] });
-      toast.success("Голос учтен!");
+      toast.success("Vote recorded!");
     },
     onError: (error: any) => {
       console.error("Vote error:", error);
-      toast.error(
-        `Ошибка голосования: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Vote error: ${error.message || "Unknown error"}`);
     },
   });
 }
 
-// Marketplace Hooks (placeholder implementations - need backend integration)
+// ─── Marketplace Hooks — wired to live marketplaceActor ───────────────────────
+
 export function useGetAllActiveListings() {
+  const { actor: marketplaceActor, isFetching: mpFetching } =
+    useMarketplaceActor();
+
   return useQuery<Listing[]>({
     queryKey: ["activeListings"],
     queryFn: async () => {
-      console.log("Fetching active listings...");
-      return [];
+      if (!marketplaceActor) {
+        console.log("[Marketplace] Actor not ready, returning empty listings");
+        return [];
+      }
+      console.log("[Marketplace] Fetching active listings...");
+      const result = await marketplaceActor.getAllActiveListings();
+      console.log("[Marketplace] Listings fetched:", result.length);
+      return result as Listing[];
     },
-    enabled: false,
+    enabled: !!marketplaceActor && !mpFetching,
+    // PATH B: poll every 30s + refetch on focus for near-instant reactive updates
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    retry: 2,
+    retryDelay: 2000,
   });
 }
 
 export function useListItem() {
+  const { actor: marketplaceActor } = useMarketplaceActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -683,59 +699,108 @@ export function useListItem() {
       itemType,
       price,
     }: { itemId: bigint; itemType: ItemType; price: bigint }) => {
-      console.log("Listing item:", itemId, itemType, price);
-      throw new Error("Marketplace listing not yet implemented");
+      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      console.log("[Marketplace] Listing item:", itemId, itemType, price);
+      const listingId = await marketplaceActor.list_item(
+        itemId,
+        itemType as any,
+        price,
+      );
+      return listingId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
-      toast.success("Предмет выставлен на продажу!");
+      queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      toast.success("Item listed for sale!");
     },
     onError: (error: any) => {
       console.error("List item error:", error);
-      toast.error(
-        `Ошибка выставления: ${error.message || "Неизвестная ошибка"}`,
-      );
+      toast.error(`Listing failed: ${error.message || "Unknown error"}`);
     },
   });
 }
 
 export function useBuyItem() {
+  const { actor: marketplaceActor } = useMarketplaceActor();
   const queryClient = useQueryClient();
 
   return useMutation<BuyResult, Error, bigint>({
     mutationFn: async (listingId: bigint) => {
-      console.log("Buying item:", listingId);
-      throw new Error("Marketplace buying not yet implemented");
+      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      console.log("[Marketplace] Buying listing:", listingId);
+      const result = await marketplaceActor.buy_item(listingId);
+      return result as BuyResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
       queryClient.invalidateQueries({ queryKey: ["landData"] });
+      queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
       queryClient.invalidateQueries({ queryKey: ["tokenBalance"] });
-      toast.success("Предмет куплен!");
+      queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      toast.success("Purchase successful!");
     },
     onError: (error: any) => {
       console.error("Buy item error:", error);
-      toast.error(`Ошибка покупки: ${error.message || "Неизвестная ошибка"}`);
+      toast.error(`Purchase failed: ${error.message || "Unknown error"}`);
     },
   });
 }
 
 export function useCancelListing() {
+  const { actor: marketplaceActor } = useMarketplaceActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (listingId: bigint) => {
-      console.log("Cancelling listing:", listingId);
-      throw new Error("Marketplace cancel listing not yet implemented");
+      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      console.log("[Marketplace] Cancelling listing:", listingId);
+      await marketplaceActor.cancelListing(listingId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
-      toast.success("Объявление отменено!");
+      queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      toast.success("Listing cancelled.");
     },
     onError: (error: any) => {
       console.error("Cancel listing error:", error);
-      toast.error(`Ошибка отмены: ${error.message || "Неизвестная ошибка"}`);
+      toast.error(`Cancel failed: ${error.message || "Unknown error"}`);
     },
+  });
+}
+
+// PATH B: Batch-fetch live land data by IDs — used by Marketplace for reactive
+// card/inspector updates. When useRemoveModifier fires, it invalidates
+// ["publicLandDataBatch"] and this query re-fetches, giving instant UI update.
+export function useGetPublicLandDataBatch(landIds: bigint[]) {
+  const { actor } = useActor();
+  // Stable key based on sorted land IDs
+  const key = [...landIds]
+    .sort()
+    .map((id) => id.toString())
+    .join(",");
+
+  return useQuery<Map<string, LandData>>({
+    queryKey: ["publicLandDataBatch", key],
+    queryFn: async () => {
+      if (!actor || landIds.length === 0) return new Map();
+      console.log("[PublicLandBatch] Fetching", landIds.length, "lands by ID");
+      const results = await Promise.all(
+        landIds.map((id) => (actor as any).getLandDataById(id)),
+      );
+      const map = new Map<string, LandData>();
+      landIds.forEach((id, idx) => {
+        const res = results[idx];
+        // Motoko ?LandData returned as Option<LandData> with __kind__
+        if (res && res.__kind__ === "Some") {
+          map.set(id.toString(), res.value as LandData);
+        }
+      });
+      console.log("[PublicLandBatch] Loaded", map.size, "land records");
+      return map;
+    },
+    enabled: !!actor && landIds.length > 0,
+    staleTime: 15000, // 15s cache — fresh enough for marketplace
+    retry: 1,
   });
 }
 

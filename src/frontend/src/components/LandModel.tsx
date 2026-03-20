@@ -15,6 +15,10 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
   const isInitialized = useRef(false);
   const group = useRef<THREE.Group>(null);
 
+  // Cached list of emissive materials — built once at init, reused every frame
+  const emissiveMaterialsRef = useRef<THREE.MeshStandardMaterial[]>([]);
+  // Reusable BLACK color for comparison — avoids `new THREE.Color` every frame
+
   const ktx2Loader = useMemo(() => {
     const loader = new KTX2Loader();
     loader.setTranscoderPath(
@@ -52,6 +56,10 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
     };
     const config = settings[landType] || settings.DEFAULT;
     console.log("[LandModel] Applying biome config:", landType, config);
+
+    // Reset cached emissive list for this model
+    emissiveMaterialsRef.current = [];
+
     if (gltf.scene?.isObject3D) {
       gltf.scene.traverse((obj: any) => {
         if (obj.isMesh && obj.material) {
@@ -68,6 +76,8 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
               m.emissive = new THREE.Color(0xffffff);
               m.toneMapped = false;
               m.userData.baseEmissive = config.emissive;
+              // Cache this material for useFrame — no traverse needed each frame
+              emissiveMaterialsRef.current.push(m);
               console.log(
                 `[LandModel] Emissive enabled: baseEmissive=${config.emissive}, envMapIntensity=${config.env}`,
               );
@@ -121,26 +131,15 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
     isInitialized.current = true;
   }, [gltf, gl, camera, modelUrl, biome]);
 
+  // Optimized useFrame: iterates only cached emissive materials, no traverse
   useFrame((state) => {
-    if (!gltf?.scene) return;
-    gltf.scene.traverse((child: any) => {
-      if (child.isMesh && child.material) {
-        const materials = Array.isArray(child.material)
-          ? child.material
-          : [child.material];
-        for (const m of materials as THREE.MeshStandardMaterial[]) {
-          if (
-            m.emissiveMap ||
-            (m.emissive && !m.emissive.equals(new THREE.Color(0x000000)))
-          ) {
-            const baseIntensity: number = m.userData.baseEmissive ?? 1.0;
-            m.emissiveIntensity =
-              baseIntensity *
-              (1.0 + Math.sin(state.clock.elapsedTime * 0.8) * 0.15);
-          }
-        }
-      }
-    });
+    const mats = emissiveMaterialsRef.current;
+    if (mats.length === 0) return;
+    const sin = Math.sin(state.clock.elapsedTime * 0.8);
+    for (const m of mats) {
+      const baseIntensity: number = m.userData.baseEmissive ?? 1.0;
+      m.emissiveIntensity = baseIntensity * (1.0 + sin * 0.15);
+    }
   });
 
   return (

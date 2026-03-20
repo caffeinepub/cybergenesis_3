@@ -123,4 +123,5 @@ export interface backendInterface {
   createProposal(args: { title: string; description: string }): Promise<bigint>;
   vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
   getAllLandsPublic(): Promise<PublicLandInfo[]>;
+  getLandDataById(landId: bigint): Promise<Option<LandData>>;
 }

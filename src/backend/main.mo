@@ -498,6 +498,20 @@ actor CyberGenesisLandMint {
     result;
   };
 
+  // Public query: get any land by its landId (no auth required — used by marketplace for live data)
+  public query func getLandDataById(landId : Nat) : async ?LandData {
+    var found : ?LandData = null;
+    label search for ((_p, userLands) in landRegistry.entries()) {
+      for (land in userLands.vals()) {
+        if (land.landId == landId) {
+          found := ?land;
+          break search;
+        };
+      };
+    };
+    found
+  };
+
   // ── Marketplace / Governance / Token Canister Config ──
 
   public shared ({ caller }) func setMarketplaceCanister(marketplace : Principal) : async () {
