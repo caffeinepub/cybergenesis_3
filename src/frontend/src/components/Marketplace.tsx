@@ -220,14 +220,6 @@ function FilterDrawer({
               >
                 RESET ALL
               </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-white/40 hover:text-white/70 transition-colors ml-1"
-                data-ocid="marketplace.close_button"
-              >
-                <X size={18} />
-              </button>
             </div>
           </div>
 
@@ -413,6 +405,7 @@ function InspectorModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
+        showCloseButton={false}
         className="max-w-2xl w-full p-0 border-0 overflow-hidden"
         style={{
           background:
@@ -665,7 +658,7 @@ function LandCard({
       {/* Hero image with smoke glow */}
       <div
         className="relative mx-4 rounded-xl overflow-hidden"
-        style={{ aspectRatio: "16/9" }}
+        style={{ height: "160px" }}
       >
         {/* Smoke pulse behind image */}
         <div
@@ -678,7 +671,7 @@ function LandCard({
         <img
           src="/assets/uploads/IMG_0577-1.webp"
           alt={displayBiome}
-          className="w-full h-full object-cover relative z-10"
+          className="w-full h-full object-contain relative z-10"
           style={{ mixBlendMode: "lighten" }}
         />
         {/* Edge glow overlay */}
@@ -1108,6 +1101,7 @@ function CreateListingModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
+        showCloseButton={false}
         className="max-w-lg w-full p-0 border-0 overflow-hidden"
         style={{
           background:
