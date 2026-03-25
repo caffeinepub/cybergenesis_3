@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetLandData } from "../hooks/useQueries";
+import { type BeamPopupData, MapBeamPopup } from "./MapBeamPopup";
 
 const MAP_SIZE = 2560;
 const RAW_MAP_URL = "/assets/uploads/IMG_0133-1.webp";
@@ -63,7 +64,7 @@ function makeBeamIcon(L: any, color: string, isOwner: boolean) {
     : "none";
 
   const html = `
-    <div style="position:relative;width:${glowW}px;height:${h}px;pointer-events:none;">
+    <div style="position:relative;width:${glowW}px;height:${h}px;cursor:pointer;">
       ${
         isOwner
           ? `<div style="
@@ -75,6 +76,7 @@ function makeBeamIcon(L: any, color: string, isOwner: boolean) {
         background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.2) 55%,transparent 100%);
         border-radius:${glowW / 2}px ${glowW / 2}px 2px 2px;
         filter:blur(${blurPx}px);
+        pointer-events:none;
       "></div>`
           : ""
       }
@@ -87,6 +89,7 @@ function makeBeamIcon(L: any, color: string, isOwner: boolean) {
         background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.9) 100%);
         border-radius:${coreW / 2}px;
         box-shadow:${coreShadow};
+        pointer-events:none;
       "></div>
     </div>`;
 
@@ -103,19 +106,21 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const mapRef = useRef<any>(null);
   const beamLayerRef = useRef<any>(null);
   const hasZoomedRef = useRef(false);
+
   const [isEngineReady, setIsEngineReady] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isZoomReady, setIsZoomReady] = useState(false);
 
+  // Popup state
+  const [popup, setPopup] = useState<BeamPopupData | null>(null);
+  const [popupPx, setPopupPx] = useState<{ x: number; y: number } | null>(null);
+
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
   const principalId = identity?.getPrincipal().toString() ?? null;
 
-  // Primary: owner's own lands
   const { data: myLands } = useGetLandData();
-
-  // Secondary: all public lands for foreign beams
   const { data: allLandsPublic } = useQuery({
     queryKey: ["allLandsPublic"],
     queryFn: () => actor?.getAllLandsPublic(),
@@ -128,6 +133,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     return () => clearTimeout(t);
   }, []);
 
+  // Load Leaflet
   useEffect(() => {
     document.body.style.overflow = "hidden";
     if ((window as any).L) {
@@ -148,6 +154,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
   }, []);
 
+  // Init map
   useEffect(() => {
     if (!isEngineReady || !mapContainerRef.current || mapRef.current) return;
     const L = (window as any).L;
@@ -168,6 +175,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       scrollWheelZoom: false,
       fadeAnimation: false,
     });
+
     const bounds: [[number, number], [number, number]] = [
       [0, 0],
       [MAP_SIZE, MAP_SIZE],
@@ -191,7 +199,10 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     updateMinZoom();
     window.addEventListener("resize", updateMinZoom);
 
-    // GPU hint for smooth panning
+    // Close popup on map click (but not beam click)
+    map.on("click", () => setPopup(null));
+
+    // GPU hint
     const perfStyle = document.createElement("style");
     perfStyle.textContent = `
       .leaflet-pane { will-change: transform; }
@@ -201,7 +212,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
 
     let zoomTarget = map.getZoom();
     let wheelTimer: ReturnType<typeof setTimeout> | null = null;
-
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 0.35 : -0.35;
@@ -211,8 +221,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       );
       if (wheelTimer) clearTimeout(wheelTimer);
       wheelTimer = setTimeout(() => {
-        // Use setZoomAround instead of flyTo — smoother at all zoom levels
-        // especially at far/full-screen zoom where flyTo causes micro-jitter
         const containerPoint = L.point(e.clientX, e.clientY);
         const latlng = map.containerPointToLatLng(containerPoint);
         map.setZoomAround(latlng, zoomTarget, {
@@ -238,7 +246,86 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
   }, [isEngineReady]);
 
-  // Draw beams: foreign from allLandsPublic, owner from myLands fallback
+  // Handle beam click — fetch live data, set popup
+  const handleBeamClick = useCallback(
+    async (
+      e: any,
+      landId: number,
+      biome: string,
+      principal: string,
+      isOwner: boolean,
+    ) => {
+      e.originalEvent?.stopPropagation();
+      const map = mapRef.current;
+      if (!map) return;
+
+      const latlng = e.latlng;
+      let modCount = 0;
+      let liveBiome = biome;
+      let livePrincipal = principal;
+
+      try {
+        const result = await actor?.getLandDataById(BigInt(landId));
+        if (result && result.__kind__ === "Some") {
+          modCount = result.value.attachedModifications?.length ?? 0;
+          livePrincipal = result.value.principal?.toString() ?? principal;
+          liveBiome = result.value.biome ?? biome;
+        }
+      } catch (_) {}
+
+      setPopup({
+        landId,
+        biome: liveBiome,
+        principal: livePrincipal,
+        modCount,
+        latlng,
+        isOwner,
+      });
+    },
+    [actor],
+  );
+
+  // Recalculate popup pixel position on map move/zoom
+  // Auto-close if beam goes out of the container viewport
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !popup) {
+      setPopupPx(null);
+      return;
+    }
+
+    const recalc = () => {
+      const pt = map.latLngToContainerPoint(popup.latlng);
+      const container = mapContainerRef.current;
+      const cw = container ? container.clientWidth : window.innerWidth;
+      const ch = container ? container.clientHeight : window.innerHeight;
+
+      // Auto-close when beam is out of visible area
+      const CLOSE_MARGIN = 40;
+      if (
+        pt.x < -CLOSE_MARGIN ||
+        pt.x > cw + CLOSE_MARGIN ||
+        pt.y < -CLOSE_MARGIN ||
+        pt.y > ch + CLOSE_MARGIN
+      ) {
+        setPopup(null);
+        setPopupPx(null);
+        return;
+      }
+
+      setPopupPx({ x: pt.x, y: pt.y });
+    };
+
+    recalc();
+    map.on("move", recalc);
+    map.on("zoom", recalc);
+    return () => {
+      map.off("move", recalc);
+      map.off("zoom", recalc);
+    };
+  }, [popup]);
+
+  // Draw beams
   useEffect(() => {
     const map = mapRef.current;
     const beamLayer = beamLayerRef.current;
@@ -261,9 +348,19 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           if (isOwner && !myCoords) myCoords = coords;
           renderedLandIds.add(id);
           const color = BIOME_COLORS[land.biome] ?? "#8800ff";
-          L.marker(coords, { icon: makeBeamIcon(L, color, isOwner) }).addTo(
-            beamLayer,
+          const marker = L.marker(coords, {
+            icon: makeBeamIcon(L, color, isOwner),
+          });
+          marker.on("click", (e: any) =>
+            handleBeamClick(
+              e,
+              id,
+              land.biome,
+              land.principal?.toString() ?? "",
+              isOwner,
+            ),
           );
+          marker.addTo(beamLayer);
         }
       } catch (e) {
         console.warn("[MapView] allLandsPublic beam render error:", e);
@@ -279,9 +376,13 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
             const coords = getPointInBiome(id, land.biome);
             if (!myCoords) myCoords = coords;
             const color = BIOME_COLORS[land.biome] ?? "#8800ff";
-            L.marker(coords, { icon: makeBeamIcon(L, color, true) }).addTo(
-              beamLayer,
+            const marker = L.marker(coords, {
+              icon: makeBeamIcon(L, color, true),
+            });
+            marker.on("click", (e: any) =>
+              handleBeamClick(e, id, land.biome, principalId ?? "", true),
             );
+            marker.addTo(beamLayer);
           } else if (!myCoords) {
             myCoords = getPointInBiome(id, land.biome);
           }
@@ -303,7 +404,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     } else if (!myCoords) {
       setIsZoomReady(true);
     }
-  }, [allLandsPublic, myLands, principalId, isMapReady]);
+  }, [allLandsPublic, myLands, principalId, isMapReady, handleBeamClick]);
 
   const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
 
@@ -319,8 +420,23 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       )}
       <div
         ref={mapContainerRef}
-        style={{ width: "100%", height: "100%", background: "#000" }}
-      />
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          background: "#000",
+        }}
+      >
+        {/* Popup card — rendered inside map container, absolute coordinates */}
+        {popup && popupPx && (
+          <MapBeamPopup
+            popup={popup}
+            popupPx={popupPx}
+            containerRef={mapContainerRef}
+            onClose={() => setPopup(null)}
+          />
+        )}
+      </div>
       <button type="button" onClick={onClose} style={closeButtonStyle}>
         ✕ EXIT
       </button>
