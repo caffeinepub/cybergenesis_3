@@ -32,7 +32,7 @@ import { SellerModal } from "./SellerModal";
 // ─────────────────────────────────────────────
 
 export default function Marketplace() {
-  const { data: listings, isPending } = useGetAllActiveListings();
+  const { data: listings } = useGetAllActiveListings();
   const { data: myLandArray } = useGetLandData();
   const { data: myModInventory } = useGetModifierInventory();
   const { identity } = useInternetIdentity();
@@ -234,31 +234,6 @@ export default function Marketplace() {
       });
     }
   };
-
-  if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center"
-          style={{
-            background: "rgba(0,255,200,0.08)",
-            border: "1px solid rgba(0,255,200,0.2)",
-            boxShadow: "0 0 30px rgba(0,255,200,0.1)",
-          }}
-          data-ocid="marketplace.loading_state"
-        >
-          <Loader2
-            size={28}
-            className="animate-spin"
-            style={{ color: "#00ffc8" }}
-          />
-        </div>
-        <p className="font-jetbrains text-sm text-white/40">
-          Loading marketplace...
-        </p>
-      </div>
-    );
-  }
 
   return (
     <>

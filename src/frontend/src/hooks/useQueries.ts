@@ -571,7 +571,7 @@ export function useGetAllActiveListings() {
     // PATH B: poll every 30s + refetch on focus for near-instant reactive updates
     refetchInterval: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    retry: 0,
     retryDelay: 2000,
   });
 }
