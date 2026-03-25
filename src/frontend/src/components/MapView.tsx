@@ -6,7 +6,7 @@ import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetLandData } from "../hooks/useQueries";
 import { type BeamPopupData, MapBeamPopup } from "./MapBeamPopup";
-import { InspectorModal } from "./marketplace/InspectorModal";
+import { MapInspectorOverlay } from "./MapInspectorOverlay";
 
 const MAP_SIZE = 6000;
 
@@ -39,13 +39,14 @@ const BIOME_REGIONS: Record<
   string,
   { x: [number, number]; y: [number, number] }
 > = {
-  MYTHIC_VOID: { x: [2384, 3630], y: [2412, 3644] },
-  MYTHIC_AETHER: { x: [2384, 3630], y: [2412, 3644] },
-  SNOW_PEAK: { x: [684, 1916], y: [1912, 3102] },
-  VOLCANIC_CRAG: { x: [3856, 5144], y: [1996, 3130] },
-  FOREST_VALLEY: { x: [556, 1830], y: [3940, 5116] },
-  DESERT_DUNE: { x: [4084, 5316], y: [3996, 5144] },
-  ISLAND_ARCHIPELAGO: { x: [2054, 3746], y: [4710, 5872] },
+  // 20% inward offset from each PNG edge to avoid transparent margins
+  MYTHIC_VOID: { x: [2580, 3420], y: [2580, 3420] },
+  MYTHIC_AETHER: { x: [2580, 3420], y: [2580, 3420] },
+  SNOW_PEAK: { x: [880, 1720], y: [2080, 2920] },
+  VOLCANIC_CRAG: { x: [4080, 4920], y: [2080, 2920] },
+  FOREST_VALLEY: { x: [780, 1620], y: [4080, 4920] },
+  DESERT_DUNE: { x: [4280, 5120], y: [4080, 4920] },
+  ISLAND_ARCHIPELAGO: { x: [2360, 3440], y: [4780, 5620] },
 };
 
 // Image overlays: background + 6 regions
@@ -550,13 +551,15 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         )}
       </div>
 
-      {/* Inspector modal — uses independent inspectorData, not derived from popup */}
+      {/* Inspector overlay — rendered inside MapView container, above Leaflet (z-index 500) */}
       {inspectorData && (
-        <InspectorModal
+        <MapInspectorOverlay
           open={inspectorOpen}
           onClose={handleCloseInspector}
-          listing={inspectorData.listing as any}
-          landData={inspectorData.landData as any}
+          landId={Number(inspectorData.listing.itemId)}
+          biome={inspectorData.landData.biome}
+          principal={inspectorData.listing.seller.toString()}
+          mods={inspectorData.landData.attachedModifications as any}
         />
       )}
 
