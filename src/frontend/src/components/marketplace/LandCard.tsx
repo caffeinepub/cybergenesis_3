@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 import type { LandData } from "../../backend.d";
 import {
   BIOME_DISPLAY,
@@ -27,6 +26,7 @@ export interface LandCardProps {
   onBuy: () => void;
   onCancel: () => void;
   onInspect: () => void;
+  onSellerClick: () => void;
   isBuying: boolean;
   isCancelling: boolean;
 }
@@ -38,6 +38,7 @@ export function LandCard({
   onBuy,
   onCancel,
   onInspect,
+  onSellerClick,
   isBuying,
   isCancelling,
 }: LandCardProps) {
@@ -49,7 +50,6 @@ export function LandCard({
   const modCount = mods.length;
   const visibleMods = mods.slice(0, 7);
   const extraCount = modCount > 7 ? modCount - 7 : 0;
-  const sellerStr = listing.seller.toString();
 
   return (
     <article
@@ -93,7 +93,7 @@ export function LandCard({
           }}
           onClick={(e) => {
             e.stopPropagation();
-            toast.info(`Seller: ${sellerStr}`, { duration: 5000 });
+            onSellerClick();
           }}
           title="Seller info"
           data-ocid="marketplace.secondary_button"

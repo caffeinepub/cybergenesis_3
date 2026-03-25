@@ -1,5 +1,4 @@
 import { Loader2, User, Zap } from "lucide-react";
-import { toast } from "sonner";
 import {
   type ListingItem,
   formatCBRDisplay,
@@ -12,6 +11,7 @@ export interface ModCardProps {
   isMyListing: boolean;
   onBuy: () => void;
   onCancel: () => void;
+  onSellerClick: () => void;
   isBuying: boolean;
   isCancelling: boolean;
 }
@@ -21,15 +21,14 @@ export function ModCard({
   isMyListing,
   onBuy,
   onCancel,
+  onSellerClick,
   isBuying,
   isCancelling,
 }: ModCardProps) {
-  // Try lookup by item ID as catalog ID
   const catalogEntry = getCatalogById(Number(listing.itemId));
   const rarity = getRarityMeta(catalogEntry?.rarity_tier ?? 1);
   const modName = catalogEntry?.name ?? `MOD #${listing.itemId}`;
   const imgUrl = catalogEntry?.asset_url;
-  const sellerStr = listing.seller.toString();
 
   return (
     <div
@@ -53,7 +52,7 @@ export function ModCard({
         }}
         onClick={(e) => {
           e.stopPropagation();
-          toast.info(`Seller: ${sellerStr}`, { duration: 5000 });
+          onSellerClick();
         }}
         data-ocid="marketplace.secondary_button"
       >

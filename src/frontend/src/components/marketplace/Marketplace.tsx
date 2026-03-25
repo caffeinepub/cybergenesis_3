@@ -25,13 +25,14 @@ import {
   getCatalogById,
 } from "./MarketplaceTypes";
 import { ModCard } from "./ModCard";
+import { SellerModal } from "./SellerModal";
 
 // ─────────────────────────────────────────────
 // MARKETPLACE — MAIN COMPONENT
 // ─────────────────────────────────────────────
 
 export default function Marketplace() {
-  const { data: listings, isLoading } = useGetAllActiveListings();
+  const { data: listings, isPending } = useGetAllActiveListings();
   const { data: myLandArray } = useGetLandData();
   const { data: myModInventory } = useGetModifierInventory();
   const { identity } = useInternetIdentity();
@@ -53,6 +54,7 @@ export default function Marketplace() {
   const [cancellingId, setCancellingId] = useState<bigint | null>(null);
   const [landsPage, setLandsPage] = useState(0);
   const [modsPage, setModsPage] = useState(0);
+  const [sellerPrincipal, setSellerPrincipal] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [filters, setFilters] = useState<FilterState>({
@@ -233,20 +235,21 @@ export default function Marketplace() {
     }
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center"
           style={{
-            background: "rgba(0,255,200,0.1)",
-            border: "1px solid rgba(0,255,200,0.3)",
-            boxShadow: "0 0 20px rgba(0,255,200,0.2)",
+            background: "rgba(0,255,200,0.08)",
+            border: "1px solid rgba(0,255,200,0.2)",
+            boxShadow: "0 0 30px rgba(0,255,200,0.1)",
           }}
           data-ocid="marketplace.loading_state"
         >
           <Loader2
-            className="w-8 h-8 animate-spin"
+            size={28}
+            className="animate-spin"
             style={{ color: "#00ffc8" }}
           />
         </div>
@@ -293,6 +296,13 @@ export default function Marketplace() {
           landData={getLandDataForListing(inspectorListing)}
         />
       )}
+
+      {/* Seller modal */}
+      <SellerModal
+        sellerPrincipal={sellerPrincipal}
+        allListings={safeListings}
+        onClose={() => setSellerPrincipal(null)}
+      />
 
       {/* Create Listing Modal */}
       <CreateListingModal
@@ -496,7 +506,7 @@ export default function Marketplace() {
             </button>
           </motion.div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pagedLands.map((listing) => (
               <LandCard
                 key={listing.listingId.toString()}
@@ -506,15 +516,18 @@ export default function Marketplace() {
                 onBuy={() => handleBuy(listing)}
                 onCancel={() => handleCancel(listing)}
                 onInspect={() => setInspectorListing(listing)}
+                onSellerClick={() =>
+                  setSellerPrincipal(listing.seller.toString())
+                }
                 isBuying={buyingId === listing.listingId}
                 isCancelling={cancellingId === listing.listingId}
               />
             ))}
 
-            {/* Pagination lands */}
+            {/* Pagination lands — spans full width */}
             {totalLandsPages > 1 && (
               <div
-                className="flex items-center justify-center gap-2 pt-4"
+                className="col-span-full flex items-center justify-center gap-2 pt-4"
                 data-ocid="marketplace.pagination_next"
               >
                 <button
@@ -627,7 +640,7 @@ export default function Marketplace() {
           </motion.div>
         ) : (
           <div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {pagedMods.map((listing) => (
                 <ModCard
                   key={listing.listingId.toString()}
@@ -635,6 +648,9 @@ export default function Marketplace() {
                   isMyListing={isMyListing(listing)}
                   onBuy={() => handleBuy(listing)}
                   onCancel={() => handleCancel(listing)}
+                  onSellerClick={() =>
+                    setSellerPrincipal(listing.seller.toString())
+                  }
                   isBuying={buyingId === listing.listingId}
                   isCancelling={cancellingId === listing.listingId}
                 />
@@ -643,12 +659,12 @@ export default function Marketplace() {
 
             {/* Pagination mods */}
             {totalModsPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-6">
+              <div className="flex items-center justify-center gap-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setModsPage((p) => Math.max(0, p - 1))}
                   disabled={modsPage === 0}
-                  className="w-9 h-9 rounded-full font-jetbrains text-sm flex items-center justify-center disabled:opacity-30"
+                  className="w-9 h-9 rounded-full font-jetbrains text-sm flex items-center justify-center disabled:opacity-30 transition-all"
                   style={{
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.12)",
@@ -694,7 +710,7 @@ export default function Marketplace() {
                     setModsPage((p) => Math.min(totalModsPages - 1, p + 1))
                   }
                   disabled={modsPage >= totalModsPages - 1}
-                  className="w-9 h-9 rounded-full font-jetbrains text-sm flex items-center justify-center disabled:opacity-30"
+                  className="w-9 h-9 rounded-full font-jetbrains text-sm flex items-center justify-center disabled:opacity-30 transition-all"
                   style={{
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.12)",
