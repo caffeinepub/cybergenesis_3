@@ -20,24 +20,32 @@ const BIOME_COLORS: Record<string, string> = {
   ISLAND_ARCHIPELAGO: "#00ffcc",
 };
 
-// Regions in 6000x6000 space
-// MYTHIC: center (3000,3000)
-// SNOW_PEAK: mid-left — closer to Forest
-// VOLCANIC_CRAG: mid-right — closer to Desert
-// FOREST_VALLEY: bottom-left
-// DESERT_DUNE: bottom-right
-// ISLAND_ARCHIPELAGO: bottom-center
+// BIOME_REGIONS — calibrated from % offsets inside each PNG's bounds
+// x = longitude, y = latitude (Leaflet CRS.Simple)
+//
+// SNOW_PEAK        image [[1800,600],[3200,2000]] lat×lng 1400×1400
+//   xMin0.06→684  xMax0.94→1916  yMin0.08→1912  yMax0.93→3102
+// VOLCANIC_CRAG   image [[1800,3800],[3200,5200]] lat×lng 1400×1400
+//   xMin0.04→3856 xMax0.96→5144  yMin0.14→1996  yMax0.95→3130
+// DESERT_DUNE     image [[3800,4000],[5200,5400]] lat×lng 1400×1400
+//   xMin0.06→4084 xMax0.94→5316  yMin0.14→3996  yMax0.96→5144
+// FOREST_VALLEY   image [[3800,500],[5200,1900]]  lat×lng 1400×1400
+//   xMin0.04→556  xMax0.95→1830  yMin0.10→3940  yMax0.94→5116
+// ISLAND_ARCHIPELAGO image [[4500,2000],[5900,3800]] lat1400×lng1800
+//   xMin0.03→2054 xMax0.97→3746  yMin0.15→4710  yMax0.98→5872
+// MYTHIC          image [[2300,2300],[3700,3700]] lat×lng 1400×1400
+//   xMin0.06→2384 xMax0.95→3630  yMin0.08→2412  yMax0.96→3644
 const BIOME_REGIONS: Record<
   string,
   { x: [number, number]; y: [number, number] }
 > = {
-  MYTHIC_VOID: { x: [2350, 3650], y: [2350, 3650] },
-  MYTHIC_AETHER: { x: [2350, 3650], y: [2350, 3650] },
-  SNOW_PEAK: { x: [650, 1950], y: [1850, 3150] },
-  VOLCANIC_CRAG: { x: [3850, 5150], y: [1850, 3150] },
-  FOREST_VALLEY: { x: [550, 1850], y: [3850, 5150] },
-  DESERT_DUNE: { x: [4050, 5350], y: [3850, 5150] },
-  ISLAND_ARCHIPELAGO: { x: [2050, 3750], y: [4550, 5850] },
+  MYTHIC_VOID: { x: [2384, 3630], y: [2412, 3644] },
+  MYTHIC_AETHER: { x: [2384, 3630], y: [2412, 3644] },
+  SNOW_PEAK: { x: [684, 1916], y: [1912, 3102] },
+  VOLCANIC_CRAG: { x: [3856, 5144], y: [1996, 3130] },
+  FOREST_VALLEY: { x: [556, 1830], y: [3940, 5116] },
+  DESERT_DUNE: { x: [4084, 5316], y: [3996, 5144] },
+  ISLAND_ARCHIPELAGO: { x: [2054, 3746], y: [4710, 5872] },
 };
 
 // Image overlays: background + 6 regions
@@ -154,6 +162,12 @@ function makeBeamIcon(L: any, color: string, isOwner: boolean) {
   });
 }
 
+// Separate inspector data state so closing the popup doesn't break the modal
+interface InspectorData {
+  listing: { itemId: bigint; seller: { toString: () => string } };
+  landData: { biome: string; attachedModifications: any[] };
+}
+
 const MapView = ({ onClose }: { onClose: () => void }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -169,8 +183,12 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const [popup, setPopup] = useState<BeamPopupData | null>(null);
   const [popupPx, setPopupPx] = useState<{ x: number; y: number } | null>(null);
 
-  // Inspector state
+  // Inspector state — independent from popup so popup close doesn't kill modal
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const inspectorOpenRef = useRef(false);
+  const [inspectorData, setInspectorData] = useState<InspectorData | null>(
+    null,
+  );
 
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
@@ -242,7 +260,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       opacity: 1,
     }).addTo(map);
 
-    // 2. Regional PNG overlays (with transparency) — trigger isImageLoaded on last
+    // 2. Regional PNG overlays (with transparency)
     MAP_LAYERS.forEach((layer, idx) => {
       const overlay = L.imageOverlay(layer.path, layer.bounds, { opacity: 1 });
       if (idx === MAP_LAYERS.length - 1) {
@@ -267,8 +285,10 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     updateMinZoom();
     window.addEventListener("resize", updateMinZoom);
 
-    // Close popup on map click (but not beam click)
-    map.on("click", () => setPopup(null));
+    // Close popup on map click — but only when inspector is closed
+    map.on("click", () => {
+      if (!inspectorOpenRef.current) setPopup(null);
+    });
 
     // GPU hint
     const perfStyle = document.createElement("style");
@@ -371,7 +391,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       const cw = container ? container.clientWidth : window.innerWidth;
       const ch = container ? container.clientHeight : window.innerHeight;
 
-      // Auto-close when beam is out of visible area
       const CLOSE_MARGIN = 40;
       if (
         pt.x < -CLOSE_MARGIN ||
@@ -408,7 +427,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     const renderedLandIds = new Set<number>();
     let myCoords: [number, number] | null = null;
 
-    // 1. All public lands
     if (Array.isArray(allLandsPublic)) {
       try {
         for (const land of allLandsPublic as any[]) {
@@ -438,7 +456,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       }
     }
 
-    // 2. Owner beam fallback from myLands
     if (Array.isArray(myLands)) {
       try {
         for (const land of myLands as any[]) {
@@ -463,7 +480,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       }
     }
 
-    // 3. Zoom to owner's land once
     if (myCoords && !hasZoomedRef.current) {
       hasZoomedRef.current = true;
       map.flyTo(myCoords, -0.5, {
@@ -477,21 +493,31 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     }
   }, [allLandsPublic, myLands, principalId, isMapReady, handleBeamClick]);
 
-  const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
-
-  // Build inspector listing/landData from popup
-  const inspectorListing = popup
-    ? {
+  // Open inspector — save data independently so popup can be closed without breaking modal
+  const handleOpenInspector = useCallback(() => {
+    if (!popup) return;
+    setInspectorData({
+      listing: {
         itemId: BigInt(popup.landId),
         seller: { toString: () => popup.principal },
-      }
-    : null;
-  const inspectorLandData = popup
-    ? {
+      },
+      landData: {
         biome: popup.biome,
         attachedModifications: popup.attachedModifications,
-      }
-    : null;
+      },
+    });
+    inspectorOpenRef.current = true;
+    setInspectorOpen(true);
+  }, [popup]);
+
+  const handleCloseInspector = useCallback(() => {
+    inspectorOpenRef.current = false;
+    setInspectorOpen(false);
+    // Small delay before clearing data so closing animation finishes
+    setTimeout(() => setInspectorData(null), 300);
+  }, []);
+
+  const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
 
   const content = (
     <div style={containerStyle}>
@@ -519,18 +545,18 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
             popupPx={popupPx}
             containerRef={mapContainerRef}
             onClose={() => setPopup(null)}
-            onInspect={() => setInspectorOpen(true)}
+            onInspect={handleOpenInspector}
           />
         )}
       </div>
 
-      {/* Inspector modal */}
-      {inspectorListing && inspectorLandData && (
+      {/* Inspector modal — uses independent inspectorData, not derived from popup */}
+      {inspectorData && (
         <InspectorModal
           open={inspectorOpen}
-          onClose={() => setInspectorOpen(false)}
-          listing={inspectorListing as any}
-          landData={inspectorLandData as any}
+          onClose={handleCloseInspector}
+          listing={inspectorData.listing as any}
+          landData={inspectorData.landData as any}
         />
       )}
 
