@@ -51,7 +51,7 @@ export default function LandSelector({
             <div className="flex items-center justify-center gap-2 mb-2">
               <MapPin className="w-5 h-5 text-[#00d4ff]" />
               <h3 className="text-xl font-bold text-white">
-                {currentLand.plotName}
+                Land #{Number(currentLand.landId)}
               </h3>
             </div>
             <p className="text-white/70 text-sm">

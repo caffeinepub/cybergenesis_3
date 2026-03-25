@@ -2,32 +2,34 @@ import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
 import Float "mo:core/Float";
-import Nat8 "mo:core/Nat8";
-import Debug "mo:core/Debug";
 import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
-import Random "mo:core/Random";
 import AccessControl "authorization/access-control";
-import OutCall "http-outcalls/outcall";
 
 actor CyberGenesisLandMint {
 
-  // Helper function for visual zone determination
-  func getVisualZone(lat : Float, lon : Float) : Text {
-    let absLat = if (lat < 0.0) { 0.0 - lat } else { lat };
-    if (absLat > 55.0) { "ZONE_A_POLAR" }
-    else if (absLat < 20.0) { "ZONE_B_EQUATORIAL" }
-    else { "ZONE_C_TEMPERATE" };
-  };
-
   let accessControlState = AccessControl.initState();
 
-  let authorizedAdminPrincipal : Principal = Principal.fromText("whd5e-pbxhk-pp65k-hxqqx-edtrx-5b7xd-itunf-pz5f5-bzjut-dxkhy-4ae");
-
+  // ── Migration stubs (kept for upgrade compatibility, not used) ──
+  public type UserProfile = { name : Text };
+  public type Modification = { mod_id : Nat; rarity_tier : Nat; multiplier_value : Float; model_url : Text };
+  public type EnergyBooster = { amount : Nat };
+  public type ConsumableBuff = { buff_type : Text; duration : Nat };
   public type Coordinates = { lat : Float; lon : Float };
+
+  let userProfiles = Map.empty<Principal, UserProfile>();
+  let modifications = Map.empty<Principal, [Modification]>();
+  let energyBoosters = Map.empty<Principal, [EnergyBooster]>();
+  let consumableBuffs = Map.empty<Principal, [ConsumableBuff]>();
+  var nextModId : Nat = 0;
+  let DISCOVERY_CHARGE_COST : Nat = 20;
+  let DISCOVERY_CBR_COST : Nat = 500;
+  let DISCOVERY_ICP_COST : Nat = 100000000;
+  let authorizedAdminPrincipal : Principal = Principal.fromText("whd5e-pbxhk-pp65k-hxqqx-edtrx-5b7xd-itunf-pz5f5-bzjut-dxkhy-4ae");
+  // ── End migration stubs ──
 
   public type LandData = {
     principal : Principal;
@@ -58,8 +60,6 @@ actor CyberGenesisLandMint {
     #maxLevelReached;
   };
 
-  public type UserProfile = { name : Text };
-
   public type TopLandEntry = {
     principal : Principal;
     plotName : Text;
@@ -67,13 +67,6 @@ actor CyberGenesisLandMint {
     upgradeLevel : Nat;
     tokenBalance : Nat;
     landId : Nat;
-  };
-
-  public type Modification = {
-    mod_id : Nat;
-    rarity_tier : Nat;
-    multiplier_value : Float;
-    model_url : Text;
   };
 
   public type LootCache = {
@@ -107,23 +100,14 @@ actor CyberGenesisLandMint {
     model_url : Text;
   };
 
-  public type EnergyBooster = { amount : Nat };
-
-  public type ConsumableBuff = { buff_type : Text; duration : Nat };
-
   public type LandToken = { token_id : Nat; rarity : Text };
 
   let landRegistry = Map.empty<Principal, [LandData]>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
   let lootCaches = Map.empty<Principal, [LootCache]>();
-  let modifications = Map.empty<Principal, [Modification]>();
-  let energyBoosters = Map.empty<Principal, [EnergyBooster]>();
-  let consumableBuffs = Map.empty<Principal, [ConsumableBuff]>();
   let landTokens = Map.empty<Principal, [LandToken]>();
   let playerInventory = Map.empty<Principal, [ModifierInstance]>();
 
   var nextCacheId : Nat = 0;
-  var nextModId : Nat = 0;
   var nextLandId : Nat = 0;
   var nextModifierInstanceId : Nat = 0;
 
@@ -131,9 +115,6 @@ actor CyberGenesisLandMint {
   var governanceCanister : ?Principal = null;
   var tokenCanister : ?Principal = null;
 
-  let DISCOVERY_CHARGE_COST : Nat = 20;
-  let DISCOVERY_CBR_COST : Nat = 500;
-  let DISCOVERY_ICP_COST : Nat = 100000000;
   let CACHE_PROCESS_CHARGE_COST : Nat = 10;
 
   var modifiers : [Modifier] = [];
@@ -154,29 +135,6 @@ actor CyberGenesisLandMint {
 
   public query ({ caller }) func isCallerAdmin() : async Bool {
     AccessControl.isAdmin(accessControlState, caller);
-  };
-
-  // ── User Profiles ──
-
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
-    userProfiles.get(caller);
-  };
-
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
-    userProfiles.get(user);
-  };
-
-  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    userProfiles.add(caller, profile);
   };
 
   // ── Land Helpers ──
@@ -209,8 +167,6 @@ actor CyberGenesisLandMint {
     { lat; lon };
   };
 
-  // Returns charge rate per minute based on upgrade level
-  // Placeholder values — will be updated with final numbers
   func getChargeRatePerMinute(level : Nat) : Int {
     switch (level) {
       case 0 { 100 };
@@ -221,7 +177,6 @@ actor CyberGenesisLandMint {
     };
   };
 
-  // Returns charge cap based on upgrade level
   func getChargeCap(level : Nat) : Nat {
     switch (level) {
       case 0 { 1000 };
@@ -255,8 +210,7 @@ actor CyberGenesisLandMint {
         let hash = hashPrincipal(caller);
         let coordinates = generateCoordinates(hash);
         let biome = getBiome(hash);
-        let rng = Random.crypto();
-        let randVal = await* rng.natRange(0, 200);
+        let randVal = (hash + nextLandId) % 200;
         let isMythicVoid = randVal == 0;
         let finalBiome = if (isMythicVoid) { "MYTHIC_VOID" } else { biome };
         let baseTokenMultiplier = if (isMythicVoid) { 1.25 } else { 1.0 };
@@ -298,8 +252,7 @@ actor CyberGenesisLandMint {
     let hash = hashPrincipal(caller) + nextLandId;
     let coordinates = generateCoordinates(hash);
     let biome = getBiome(hash);
-    let rng = Random.crypto();
-    let randVal = await* rng.natRange(0, 200);
+    let randVal = (hash + nextLandId) % 200;
     let isMythicVoid = randVal == 0;
     let finalBiome = if (isMythicVoid) { "MYTHIC_VOID" } else { biome };
     let baseTokenMultiplier = if (isMythicVoid) { 1.25 } else { 1.0 };
@@ -364,12 +317,9 @@ actor CyberGenesisLandMint {
             let baseReward = 100 * (updatedLand.upgradeLevel + 1);
             let rewardF = baseReward.toFloat() * updatedLand.baseTokenMultiplier;
             let reward = Int.abs(rewardF.toInt());
-            Debug.print("Claiming rewards for landId: " # landId.toText() # " Amount: " # reward.toText());
             try {
               await cyberTokenCanister.mint(caller, reward);
-              Debug.print("Mint successful, tokens credited: " # reward.toText());
-            } catch (error) {
-              Debug.print("Mint failed for claim");
+            } catch (_error) {
               return #mintFailed("Failed to mint tokens");
             };
             let finalLand = { updatedLand with lastClaimTime = currentTime; cycleCharge = updatedLand.cycleCharge - 10 };
@@ -402,7 +352,6 @@ actor CyberGenesisLandMint {
           case (?index) {
             let land = lands[index];
             let updatedLand = updateCharge(land);
-            // Max display level is 5/5 (upgradeLevel = 4)
             if (updatedLand.upgradeLevel >= 4) { return #maxLevelReached };
             let newLevel = updatedLand.upgradeLevel + 1;
             let newCap = getChargeCap(newLevel);
@@ -418,69 +367,12 @@ actor CyberGenesisLandMint {
     };
   };
 
-  public shared ({ caller }) func updatePlotName(landId : Nat, name : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update plot name");
-    };
-    if (name.size() > 20) { Runtime.trap("Plot name must be 20 characters or less") };
-    switch (landRegistry.get(caller)) {
-      case null { Runtime.trap("Land not found for principal") };
-      case (?lands) {
-        var landIndex : ?Nat = null;
-        var i = 0;
-        for (land in lands.vals()) {
-          if (land.landId == landId) { landIndex := ?i };
-          i += 1;
-        };
-        switch (landIndex) {
-          case null { Runtime.trap("Land with ID " # landId.toText() # " not found") };
-          case (?index) {
-            let updatedLand = { lands[index] with plotName = name };
-            let updatedLands = Array.tabulate(lands.size(), func(i : Nat) : LandData {
-              if (i == index) { updatedLand } else { lands[i] };
-            });
-            landRegistry.add(caller, updatedLands);
-          };
-        };
-      };
-    };
-  };
-
-  public shared ({ caller }) func updateDecoration(landId : Nat, url : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update decoration");
-    };
-    if (url.size() > 200) { Runtime.trap("Decoration URL must be 200 characters or less") };
-    switch (landRegistry.get(caller)) {
-      case null { Runtime.trap("Land not found for principal") };
-      case (?lands) {
-        var landIndex : ?Nat = null;
-        var i = 0;
-        for (land in lands.vals()) {
-          if (land.landId == landId) { landIndex := ?i };
-          i += 1;
-        };
-        switch (landIndex) {
-          case null { Runtime.trap("Land with ID " # landId.toText() # " not found") };
-          case (?index) {
-            let updatedLand = { lands[index] with decorationURL = ?url };
-            let updatedLands = Array.tabulate(lands.size(), func(i : Nat) : LandData {
-              if (i == index) { updatedLand } else { lands[i] };
-            });
-            landRegistry.add(caller, updatedLands);
-          };
-        };
-      };
-    };
-  };
-
   public query ({ caller }) func getLandDataQuery() : async ?[LandData] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can query land data");
     };
     landRegistry.get(caller);
   };
-
 
   public type PublicLandInfo = {
     landId : Nat;
@@ -498,7 +390,6 @@ actor CyberGenesisLandMint {
     result;
   };
 
-  // Public query: get any land by its landId (no auth required — used by marketplace for live data)
   public query func getLandDataById(landId : Nat) : async ?LandData {
     var found : ?LandData = null;
     label search for ((_p, userLands) in landRegistry.entries()) {
@@ -540,7 +431,6 @@ actor CyberGenesisLandMint {
   public shared ({ caller }) func getLandOwner(landId : Nat) : async ?Principal {
     let marketplace = switch (marketplaceCanister) {
       case null {
-        Debug.print("Unauthorized getLandOwner attempt - Marketplace not configured.");
         Runtime.trap("Unauthorized: Marketplace canister must be configured by admin before land transfers are enabled");
       };
       case (?m) { m };
@@ -548,7 +438,6 @@ actor CyberGenesisLandMint {
     if (caller != marketplace) {
       Runtime.trap("Unauthorized: Only the authorized marketplace canister can query land ownership");
     };
-    Debug.print("Querying ownership for landId: " # landId.toText());
     for ((principal, lands) in landRegistry.entries()) {
       for (land in lands.vals()) {
         if (land.landId == landId) { return ?principal };
@@ -567,7 +456,6 @@ actor CyberGenesisLandMint {
     if (caller != marketplace) {
       Runtime.trap("Unauthorized: Only the authorized marketplace canister can transfer land");
     };
-    Debug.print("Transfer request for landId: " # landId.toText() # " to: " # to.toText());
     for ((principal, lands) in landRegistry.entries()) {
       var landIndex : ?Nat = null;
       var i = 0;
@@ -588,8 +476,6 @@ actor CyberGenesisLandMint {
             case null { [] };
           };
           landRegistry.add(to, ([toLands, [newLand]]).flatten());
-          Debug.print("Land transfer successful - LandId: " # landId.toText());
-          // Auto-mint new land if seller now has 0 lands
           let sellerRemaining = switch (landRegistry.get(principal)) {
             case (?l) { l };
             case null { [] };
@@ -598,8 +484,7 @@ actor CyberGenesisLandMint {
             let hash = hashPrincipal(principal) + nextLandId;
             let coords = generateCoordinates(hash);
             let biomeVal = getBiome(hash);
-            let rng = Random.crypto();
-            let rv = await* rng.natRange(0, 200);
+            let rv = (hashPrincipal(principal) + nextLandId) % 200;
             let isMV = rv == 0;
             let finalBiomeAuto = if (isMV) { "MYTHIC_VOID" } else { biomeVal };
             let btmAuto = if (isMV) { 1.25 } else { 1.0 };
@@ -620,17 +505,14 @@ actor CyberGenesisLandMint {
             };
             nextLandId += 1;
             landRegistry.add(principal, [autoLand]);
-            Debug.print("Auto-minted land for seller " # principal.toText() # " LandId: " # autoLand.landId.toText());
           };
           return true;
         };
       };
     };
-    Debug.print("Land transfer failed - LandId not found: " # landId.toText());
     false;
   };
 
-  // Transfer a modifier from one user to another (callable only by marketplace canister)
   public shared ({ caller }) func transferModifier(from : Principal, to : Principal, modifierInstanceId : Nat) : async Bool {
     let marketplace = switch (marketplaceCanister) {
       case null { Runtime.trap("Unauthorized: Marketplace canister must be configured") };
@@ -662,7 +544,6 @@ actor CyberGenesisLandMint {
           case null { [] };
         };
         playerInventory.add(to, ([toInventory, [modifier]]).flatten());
-        Debug.print("Modifier transfer ok - instanceId: " # modifierInstanceId.toText() # " from: " # from.toText() # " to: " # to.toText());
         return true;
       };
     };
@@ -776,8 +657,7 @@ actor CyberGenesisLandMint {
           });
           landRegistry.add(caller, updatedLands);
         };
-        let rng = Random.crypto();
-        let randVal = await* rng.natRange(0, 100);
+        let randVal = nextModifierInstanceId % 100;
         let tier = if (randVal < 70) { 1 } else if (randVal < 95) { 2 } else { 3 };
         let multiplier = switch (tier) {
           case 1 { 1.1 }; case 2 { 1.25 }; case 3 { 1.5 }; case _ { 1.0 };
@@ -909,31 +789,6 @@ actor CyberGenesisLandMint {
     };
   };
 
-  public shared ({ caller }) func useConsumableBuff(item_id : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can use consumable buffs");
-    };
-    let userBuffs = switch (consumableBuffs.get(caller)) {
-      case (?buffs) { buffs };
-      case null { Runtime.trap("No consumable buffs found for user") };
-    };
-    var buffIndex : ?Nat = null;
-    var i = 0;
-    for (_ in userBuffs.vals()) {
-      if (i == item_id) { buffIndex := ?i };
-      i += 1;
-    };
-    switch (buffIndex) {
-      case null { Runtime.trap("Buff not found") };
-      case (?index) {
-        let updatedBuffs = Array.tabulate(userBuffs.size() - 1, func(i : Nat) : ConsumableBuff {
-          if (i < index) { userBuffs[i] } else { userBuffs[i + 1] };
-        });
-        consumableBuffs.add(caller, updatedBuffs);
-      };
-    };
-  };
-
   public query ({ caller }) func getMyLootCaches() : async [LootCache] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view their loot caches");
@@ -941,38 +796,6 @@ actor CyberGenesisLandMint {
     switch (lootCaches.get(caller)) {
       case (?caches) { caches };
       case null { [] };
-    };
-  };
-
-  public query ({ caller }) func getMyModifications() : async [Modification] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their modifications");
-    };
-    switch (modifications.get(caller)) {
-      case (?mods) { mods };
-      case null { [] };
-    };
-  };
-
-  public query ({ caller }) func getHighestRarityModification() : async ?Modification {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their modifications");
-    };
-    switch (modifications.get(caller)) {
-      case null { null };
-      case (?mods) {
-        if (mods.size() == 0) { return null };
-        var highest : ?Modification = null;
-        for (mod in mods.vals()) {
-          switch (highest) {
-            case null { highest := ?mod };
-            case (?current) {
-              if (mod.rarity_tier > current.rarity_tier) { highest := ?mod };
-            };
-          };
-        };
-        highest;
-      };
     };
   };
 
@@ -1023,35 +846,4 @@ actor CyberGenesisLandMint {
     modifiers.filter(func(m : Modifier) : Bool { m.rarity_tier == tier });
   };
 
-  public query ({ caller }) func getCurrentCbrBalance() : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can check their CBR balance");
-    };
-    Debug.print("getCurrentCbrBalance - Frontend should call CyberTokenCanister directly");
-    0;
-  };
-
-  // ── Network / Admin ──
-
-  public query func transform(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
-    OutCall.transform(input);
-  };
-
-  public shared ({ caller }) func getAssetCanisterCycleBalance() : async Text {
-    if (caller != authorizedAdminPrincipal) {
-      Runtime.trap("Unauthorized: Only the authorized admin principal can view cycle balances");
-    };
-    Debug.print("Admin requesting Asset Canister cycle balance");
-    let url = "https://icp-api.io/api/v3/canisters/bd3sg-teaaa-aaaaa-qaaba-cai";
-    await OutCall.httpGetRequest(url, [], transform);
-  };
-
-  public shared ({ caller }) func getLandCanisterCycleBalance() : async Text {
-    if (caller != authorizedAdminPrincipal) {
-      Runtime.trap("Unauthorized: Only the authorized admin principal can view cycle balances");
-    };
-    Debug.print("Admin requesting Land Canister cycle balance");
-    let url = "https://icp-api.io/api/v3/canisters/br5f7-7uaaa-aaaaa-qaaca-cai";
-    await OutCall.httpGetRequest(url, [], transform);
-  };
 };

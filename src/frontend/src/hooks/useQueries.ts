@@ -1,10 +1,4 @@
-import type {
-  LandData,
-  ModifierInstance,
-  Time,
-  TopLandEntry,
-  UserProfile,
-} from "@/backend";
+import type { LandData, ModifierInstance, Time, TopLandEntry } from "@/backend";
 import { formatTokenBalance } from "@/lib/tokenUtils";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -132,51 +126,6 @@ export function useGetLandData() {
     enabled: !!actor && !isFetching,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-}
-
-// User Profile Query
-export function useGetCallerUserProfile() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  const query = useQuery<UserProfile | null>({
-    queryKey: ["currentUserProfile"],
-    queryFn: async () => {
-      if (!actor) throw new Error("Actor not available");
-      const result = await actor.getCallerUserProfile();
-      if (result.__kind__ === "Some") return result.value;
-      return null;
-    },
-    enabled: !!actor && !actorFetching,
-    retry: false,
-  });
-
-  return {
-    ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && query.isFetched,
-  };
-}
-
-// Save User Profile Mutation
-export function useSaveCallerUserProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error("Actor not available");
-      console.log("Saving user profile:", profile);
-      await actor.saveCallerUserProfile(profile);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
-      toast.success("Profile saved");
-    },
-    onError: (error: any) => {
-      console.error("Profile save error:", error);
-      toast.error(`Profile save error: ${error.message || "Unknown error"}`);
-    },
   });
 }
 
@@ -390,50 +339,6 @@ export function useUpgradePlot() {
   });
 }
 
-// Update Plot Name Mutation
-export function useUpdatePlotName() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ landId, name }: { landId: bigint; name: string }) => {
-      if (!actor) throw new Error("Actor not available");
-      await actor.updatePlotName(landId, name);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["landData"] });
-      toast.success("Name updated");
-    },
-    onError: (error: any) => {
-      console.error("Update plot name error:", error);
-      toast.error(`Name update error: ${error.message || "Unknown error"}`);
-    },
-  });
-}
-
-// Update Decoration Mutation
-export function useUpdateDecoration() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ landId, url }: { landId: bigint; url: string }) => {
-      if (!actor) throw new Error("Actor not available");
-      await actor.updateDecoration(landId, url);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["landData"] });
-      toast.success("Decoration updated");
-    },
-    onError: (error: any) => {
-      console.error("Update decoration error:", error);
-      toast.error(
-        `Decoration update error: ${error.message || "Unknown error"}`,
-      );
-    },
-  });
-}
-
 // Get Modifier Inventory Query
 export function useGetModifierInventory() {
   const { actor, isFetching } = useActor();
@@ -548,24 +453,6 @@ export function useGetTopLands() {
       console.log("Fetching top lands...");
       const result = await actor.getTopLands(BigInt(25));
       console.log("Top lands fetched:", result);
-      return result;
-    },
-    enabled: !!actor && !isFetching,
-    retry: 2,
-  });
-}
-
-// Get My Modifications Query
-export function useGetMyModifications() {
-  const { actor, isFetching } = useActor();
-
-  return useQuery({
-    queryKey: ["myModifications"],
-    queryFn: async () => {
-      if (!actor) return [];
-      console.log("Fetching my modifications...");
-      const result = await actor.getMyModifications();
-      console.log("My modifications fetched:", result);
       return result;
     },
     enabled: !!actor && !isFetching,

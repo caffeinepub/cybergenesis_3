@@ -73,7 +73,6 @@ export default function Dashboard() {
         index: selectedLandIndex,
         biome: currentLand.biome,
         landId: currentLand.landId,
-        coordinates: currentLand.coordinates,
       });
     }
   }, [lands, selectedLandIndex]);
