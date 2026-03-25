@@ -17,11 +17,6 @@ export type Option<T> = Some<T> | None;
 
 export type Time = bigint;
 
-export interface Coordinates {
-  lat: number;
-  lon: number;
-}
-
 export interface ModifierInstance {
   modifierInstanceId: bigint;
   modifierType: string;
@@ -34,9 +29,6 @@ export interface LandData {
   landId: bigint;
   principal: Principal;
   biome: string;
-  plotName: string;
-  decorationURL: string | null | [];
-  coordinates: Coordinates;
   cycleCharge: bigint;
   chargeCap: bigint;
   upgradeLevel: bigint;
@@ -75,53 +67,46 @@ export interface TopLandEntry {
   upgradeLevel: bigint;
   principal: Principal;
   tokenBalance: bigint;
-  plotName: string;
   biome: string;
   landId: bigint;
 }
 
-export interface UserProfile {
-  name: string;
-}
-
-export interface Modification {
-  model_url: string;
+export interface Modifier {
   mod_id: bigint;
   rarity_tier: bigint;
+  name: string;
   multiplier_value: number;
+  asset_url: string;
 }
 
 export interface backendInterface {
   getLandData(): Promise<LandData[]>;
-  getLandDataQuery(): Promise<LandData[]>;
-  getUserProfile(principal: Principal): Promise<Option<UserProfile>>;
-  getCallerUserProfile(): Promise<Option<UserProfile>>;
-  saveCallerUserProfile(profile: UserProfile): Promise<void>;
+  getLandDataQuery(): Promise<LandData[] | null>;
   getCallerUserRole(): Promise<string>;
   isCallerAdmin(): Promise<boolean>;
   initializeAccessControl(): Promise<void>;
   claimRewards(landId: bigint): Promise<ClaimResult>;
   upgradePlot(landId: bigint, cost: bigint): Promise<UpgradeResult>;
-  updatePlotName(landId: bigint, name: string): Promise<void>;
-  updateDecoration(landId: bigint, url: string): Promise<void>;
   applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void>;
   removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void>;
-  mintLand(): Promise<unknown>;
+  mintLand(): Promise<LandData>;
   getTopLands(limit: bigint): Promise<TopLandEntry[]>;
-  getMyModifications(): Promise<Modification[]>;
   getMyModifierInventory(): Promise<ModifierInstance[]>;
   getMyLootCaches(): Promise<LootCache[]>;
   discoverLootCache(tier: bigint): Promise<DiscoverCacheResult>;
   processCache(cacheId: bigint): Promise<ModifierInstance>;
-  getTokenBalance(): Promise<bigint>;
-  getCanisterTokenBalance(): Promise<bigint>;
-  debugTokenBalance(): Promise<void>;
-  debugCanisterBalance(): Promise<void>;
-  getStakedBalance(): Promise<bigint>;
-  stakeTokens(amount: bigint): Promise<unknown>;
-  getAllActiveProposals(): Promise<unknown[]>;
-  createProposal(args: { title: string; description: string }): Promise<bigint>;
-  vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
   getAllLandsPublic(): Promise<PublicLandInfo[]>;
   getLandDataById(landId: bigint): Promise<Option<LandData>>;
+  adminGetLandData(user: Principal): Promise<LandData[] | null>;
+  setMarketplaceCanister(marketplace: Principal): Promise<void>;
+  setGovernanceCanister(governance: Principal): Promise<void>;
+  setTokenCanister(token: Principal): Promise<void>;
+  getLandOwner(landId: bigint): Promise<Principal | null>;
+  transferLand(to: Principal, landId: bigint): Promise<boolean>;
+  transferModifier(from: Principal, to: Principal, modifierInstanceId: bigint): Promise<boolean>;
+  adminSetAllModifiers(modifier_list: Modifier[]): Promise<void>;
+  getAllModifiers(): Promise<Modifier[]>;
+  getModifierById(mod_id: bigint): Promise<Modifier | null>;
+  getModifiersByTier(tier: bigint): Promise<Modifier[]>;
+  assignCallerUserRole(user: Principal, role: string): Promise<void>;
 }

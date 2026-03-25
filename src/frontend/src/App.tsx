@@ -1,10 +1,7 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import ConfigValidator from "./components/ConfigValidator";
 import CosmicBackground from "./components/CosmicBackground";
 import ParticleBackground from "./components/ParticleBackground";
-import ReinitializationProgress from "./components/ReinitializationProgress";
-import { useActorReinitializer } from "./hooks/useActorReinitializer";
 import { useActorWithInit } from "./hooks/useActorWithInit";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import Dashboard from "./pages/Dashboard";
@@ -99,23 +96,8 @@ export default function App() {
     useInternetIdentity();
   const { isInitializing: actorInitializing, error: actorError } =
     useActorWithInit();
-  const reinitializer = useActorReinitializer();
 
   const isAuthenticated = !!identity;
-
-  if (reinitializer.isReinitializing) {
-    return (
-      <>
-        <CosmicBackground />
-        <ParticleBackground />
-        <ReinitializationProgress
-          attempt={reinitializer.attempt}
-          maxAttempts={3}
-          currentGateway={reinitializer.currentGateway}
-        />
-      </>
-    );
-  }
 
   if (identityInitializing || (isAuthenticated && actorInitializing)) {
     return <CyberLoader />;
@@ -126,7 +108,6 @@ export default function App() {
       <>
         <CosmicBackground />
         <ParticleBackground />
-        <ConfigValidator />
         <div className="min-h-screen flex items-center justify-center relative z-10 p-4">
           <div className="max-w-3xl mx-auto p-8 glassmorphism rounded-lg neon-border box-glow-gold">
             <div className="flex items-start space-x-4">
@@ -165,7 +146,6 @@ export default function App() {
       <>
         <CosmicBackground />
         <ParticleBackground />
-        <ConfigValidator />
         <LandingPage />
       </>
     );
@@ -175,7 +155,6 @@ export default function App() {
     <>
       <CosmicBackground />
       <ParticleBackground />
-      <ConfigValidator />
       <Dashboard />
     </>
   );

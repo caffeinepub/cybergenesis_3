@@ -90,11 +90,6 @@ export class ExternalBlob {
     }
 }
 
-export interface Coordinates {
-    lat: number;
-    lon: number;
-}
-
 export interface ModifierInstance {
     modifierInstanceId: bigint;
     modifierType: string;
@@ -103,20 +98,10 @@ export interface ModifierInstance {
     multiplier_value: number;
 }
 
-export interface Modification {
-    model_url: string;
-    mod_id: bigint;
-    rarity_tier: bigint;
-    multiplier_value: number;
-}
-
 export interface LandData {
     landId: bigint;
     principal: Principal;
     biome: string;
-    plotName: string;
-    decorationURL: string | null | [];
-    coordinates: Coordinates;
     cycleCharge: bigint;
     chargeCap: bigint;
     upgradeLevel: bigint;
@@ -151,17 +136,12 @@ export type UpgradeResult =
     | { __kind__: "success"; success: { newLevel: bigint; remainingTokens: bigint } }
     | { __kind__: "insufficientTokens"; insufficientTokens: { required: bigint; current: bigint } };
 
-export interface UserProfile {
-    name: string;
-}
-
 export type Time = bigint;
 
 export interface TopLandEntry {
     upgradeLevel: bigint;
     principal: Principal;
     tokenBalance: bigint;
-    plotName: string;
     biome: string;
     landId: bigint;
 }
@@ -172,38 +152,44 @@ export interface PublicLandInfo {
     principal: Principal;
 }
 
+export interface Modifier {
+    mod_id: bigint;
+    rarity_tier: bigint;
+    name: string;
+    multiplier_value: number;
+    asset_url: string;
+}
+
 export interface backendInterface {
     getLandData(): Promise<LandData[]>;
-    getLandDataQuery(): Promise<LandData[]>;
-    getUserProfile(principal: Principal): Promise<Option<UserProfile>>;
-    getCallerUserProfile(): Promise<Option<UserProfile>>;
-    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    getLandDataQuery(): Promise<LandData[] | null>;
     getCallerUserRole(): Promise<string>;
     isCallerAdmin(): Promise<boolean>;
     initializeAccessControl(): Promise<void>;
     claimRewards(landId: bigint): Promise<ClaimResult>;
     upgradePlot(landId: bigint, cost: bigint): Promise<UpgradeResult>;
-    updatePlotName(landId: bigint, name: string): Promise<void>;
-    updateDecoration(landId: bigint, url: string): Promise<void>;
     applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void>;
     removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void>;
-    mintLand(): Promise<unknown>;
+    mintLand(): Promise<LandData>;
     getTopLands(limit: bigint): Promise<TopLandEntry[]>;
-    getMyModifications(): Promise<Modification[]>;
     getMyModifierInventory(): Promise<ModifierInstance[]>;
     getMyLootCaches(): Promise<LootCache[]>;
     discoverLootCache(tier: bigint): Promise<DiscoverCacheResult>;
     processCache(cacheId: bigint): Promise<ModifierInstance>;
-    getTokenBalance(): Promise<bigint>;
-    getCanisterTokenBalance(): Promise<bigint>;
-    debugTokenBalance(): Promise<void>;
-    debugCanisterBalance(): Promise<void>;
-    getStakedBalance(): Promise<bigint>;
-    stakeTokens(amount: bigint): Promise<unknown>;
-    getAllActiveProposals(): Promise<unknown[]>;
-    createProposal(args: { title: string; description: string }): Promise<bigint>;
-    vote(args: { proposalId: bigint; choice: boolean }): Promise<unknown>;
     getAllLandsPublic(): Promise<PublicLandInfo[]>;
+    getLandDataById(landId: bigint): Promise<Option<LandData>>;
+    adminGetLandData(user: Principal): Promise<LandData[] | null>;
+    setMarketplaceCanister(marketplace: Principal): Promise<void>;
+    setGovernanceCanister(governance: Principal): Promise<void>;
+    setTokenCanister(token: Principal): Promise<void>;
+    getLandOwner(landId: bigint): Promise<Principal | null>;
+    transferLand(to: Principal, landId: bigint): Promise<boolean>;
+    transferModifier(from: Principal, to: Principal, modifierInstanceId: bigint): Promise<boolean>;
+    adminSetAllModifiers(modifier_list: Modifier[]): Promise<void>;
+    getAllModifiers(): Promise<Modifier[]>;
+    getModifierById(mod_id: bigint): Promise<Modifier | null>;
+    getModifiersByTier(tier: bigint): Promise<Modifier[]>;
+    assignCallerUserRole(user: Principal, role: string): Promise<void>;
 }
 
 function fromCandidOpt<T>(opt: [] | [T]): Option<T> {
@@ -220,34 +206,15 @@ function fromCandidVariant(v: Record<string, any>): any {
     return { __kind__: key, [key]: value };
 }
 
-function convertLandData(land: any): LandData {
-    return {
-        ...land,
-        decorationURL: land.decorationURL.length > 0 ? land.decorationURL[0] : null,
-    };
-}
-
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async getLandData(): Promise<LandData[]> {
-        const result = await this.actor.getLandData();
-        return result.map(convertLandData);
+        return this.actor.getLandData();
     }
-    async getLandDataQuery(): Promise<LandData[]> {
+    async getLandDataQuery(): Promise<LandData[] | null> {
         const result = await this.actor.getLandDataQuery();
-        if (result.length === 0) return [];
-        return result[0].map(convertLandData);
-    }
-    async getUserProfile(principal: Principal): Promise<Option<UserProfile>> {
-        const result = await this.actor.getUserProfile(principal);
-        return fromCandidOpt(result);
-    }
-    async getCallerUserProfile(): Promise<Option<UserProfile>> {
-        const result = await this.actor.getCallerUserProfile();
-        return fromCandidOpt(result);
-    }
-    async saveCallerUserProfile(profile: UserProfile): Promise<void> {
-        await this.actor.saveCallerUserProfile(profile);
+        if (!result || result.length === 0) return null;
+        return result[0];
     }
     async getCallerUserRole(): Promise<string> {
         const result = await this.actor.getCallerUserRole();
@@ -271,29 +238,20 @@ export class Backend implements backendInterface {
         const result = await this.actor.upgradePlot(landId, cost);
         return fromCandidVariant(result);
     }
-    async updatePlotName(landId: bigint, name: string): Promise<void> {
-        await this.actor.updatePlotName(landId, name);
-    }
-    async updateDecoration(landId: bigint, url: string): Promise<void> {
-        await this.actor.updateDecoration(landId, url);
-    }
     async applyModifier(modifierInstanceId: bigint, landId: bigint): Promise<void> {
         await this.actor.applyModifier(modifierInstanceId, landId);
     }
     async removeModifier(landId: bigint, modifierInstanceId: bigint): Promise<void> {
         await (this.actor as any).removeModifier(landId, modifierInstanceId);
     }
-    async mintLand(): Promise<unknown> {
+    async mintLand(): Promise<LandData> {
         return this.actor.mintLand();
     }
     async getTopLands(limit: bigint): Promise<TopLandEntry[]> {
         return this.actor.getTopLands(limit);
     }
-    async getMyModifications(): Promise<Modification[]> {
-        return this.actor.getMyModifications();
-    }
     async getMyModifierInventory(): Promise<ModifierInstance[]> {
-        return [];
+        return (this.actor as any).getMyModifierInventory();
     }
     async getMyLootCaches(): Promise<LootCache[]> {
         return this.actor.getMyLootCaches();
@@ -305,18 +263,52 @@ export class Backend implements backendInterface {
     async processCache(cacheId: bigint): Promise<ModifierInstance> {
         return this.actor.processCache(cacheId);
     }
-    async getTokenBalance(): Promise<bigint> {
-        return this.actor.getCurrentCbrBalance();
+    async getAllLandsPublic(): Promise<PublicLandInfo[]> {
+        return (this.actor as any).getAllLandsPublic();
     }
-    async getCanisterTokenBalance(): Promise<bigint> { return 0n; }
-    async debugTokenBalance(): Promise<void> {}
-    async debugCanisterBalance(): Promise<void> {}
-    async getStakedBalance(): Promise<bigint> { return 0n; }
-    async stakeTokens(_amount: bigint): Promise<unknown> { return null; }
-    async getAllActiveProposals(): Promise<unknown[]> { return []; }
-    async createProposal(_args: { title: string; description: string }): Promise<bigint> { return 0n; }
-    async vote(_args: { proposalId: bigint; choice: boolean }): Promise<unknown> { return null; }
-    async getAllLandsPublic(): Promise<PublicLandInfo[]> { return (this.actor as any).getAllLandsPublic(); }
+    async getLandDataById(landId: bigint): Promise<Option<LandData>> {
+        const result = await (this.actor as any).getLandDataById(landId);
+        return fromCandidOpt(result);
+    }
+    async adminGetLandData(user: Principal): Promise<LandData[] | null> {
+        const result = await (this.actor as any).adminGetLandData(user);
+        return result.length > 0 ? result[0] : null;
+    }
+    async setMarketplaceCanister(marketplace: Principal): Promise<void> {
+        await (this.actor as any).setMarketplaceCanister(marketplace);
+    }
+    async setGovernanceCanister(governance: Principal): Promise<void> {
+        await (this.actor as any).setGovernanceCanister(governance);
+    }
+    async setTokenCanister(token: Principal): Promise<void> {
+        await (this.actor as any).setTokenCanister(token);
+    }
+    async getLandOwner(landId: bigint): Promise<Principal | null> {
+        const result = await (this.actor as any).getLandOwner(landId);
+        return result.length > 0 ? result[0] : null;
+    }
+    async transferLand(to: Principal, landId: bigint): Promise<boolean> {
+        return (this.actor as any).transferLand(to, landId);
+    }
+    async transferModifier(from: Principal, to: Principal, modifierInstanceId: bigint): Promise<boolean> {
+        return (this.actor as any).transferModifier(from, to, modifierInstanceId);
+    }
+    async adminSetAllModifiers(modifier_list: Modifier[]): Promise<void> {
+        await (this.actor as any).adminSetAllModifiers(modifier_list);
+    }
+    async getAllModifiers(): Promise<Modifier[]> {
+        return (this.actor as any).getAllModifiers();
+    }
+    async getModifierById(mod_id: bigint): Promise<Modifier | null> {
+        const result = await (this.actor as any).getModifierById(mod_id);
+        return result.length > 0 ? result[0] : null;
+    }
+    async getModifiersByTier(tier: bigint): Promise<Modifier[]> {
+        return (this.actor as any).getModifiersByTier(tier);
+    }
+    async assignCallerUserRole(user: Principal, role: string): Promise<void> {
+        await (this.actor as any).assignCallerUserRole(user, role);
+    }
 }
 export interface CreateActorOptions {
     agent?: Agent;

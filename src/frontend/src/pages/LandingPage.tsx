@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import CosmicBackground from "../components/CosmicBackground";
 import ParticleBackground from "../components/ParticleBackground";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { debugError, debugLog } from "../lib/debugConfig";
 
 export default function LandingPage() {
   const { login, loginStatus } = useInternetIdentity();
@@ -10,11 +9,9 @@ export default function LandingPage() {
 
   const handleLogin = async () => {
     try {
-      debugLog("Initiating login process");
       setLoginError(null);
       await login();
     } catch (error: any) {
-      debugError("Login error", error);
       console.error("Login failed:", error);
       if (error.message === "User is already authenticated") {
         setLoginError("Вы уже вошли через Internet Identity");

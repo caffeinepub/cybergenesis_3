@@ -13,7 +13,7 @@ actor CyberGenesisLandMint {
 
   let accessControlState = AccessControl.initState();
 
-  // ── Migration stubs (kept for upgrade compatibility, not used) ──
+  // ── Stable-compatible migration stubs (kept for upgrade compatibility) ──
   public type UserProfile = { name : Text };
   public type Modification = { mod_id : Nat; rarity_tier : Nat; multiplier_value : Float; model_url : Text };
   public type EnergyBooster = { amount : Nat };
@@ -285,7 +285,7 @@ actor CyberGenesisLandMint {
       Runtime.trap("Unauthorized: Only users can claim rewards");
     };
     let cyberTokenCanister = switch (tokenCanister) {
-      case null { Runtime.trap("Configuration error: Token canister not set. Admin must call setTokenCanister first.") };
+      case null { Runtime.trap("Configuration error: Token canister not set.") };
       case (?canisterId) {
         actor (canisterId.toText()) : actor { mint : (Principal, Nat) -> async () };
       };
@@ -430,13 +430,11 @@ actor CyberGenesisLandMint {
 
   public shared ({ caller }) func getLandOwner(landId : Nat) : async ?Principal {
     let marketplace = switch (marketplaceCanister) {
-      case null {
-        Runtime.trap("Unauthorized: Marketplace canister must be configured by admin before land transfers are enabled");
-      };
+      case null { Runtime.trap("Marketplace canister not configured") };
       case (?m) { m };
     };
     if (caller != marketplace) {
-      Runtime.trap("Unauthorized: Only the authorized marketplace canister can query land ownership");
+      Runtime.trap("Unauthorized: Only the marketplace canister can query land ownership");
     };
     for ((principal, lands) in landRegistry.entries()) {
       for (land in lands.vals()) {
@@ -448,13 +446,11 @@ actor CyberGenesisLandMint {
 
   public shared ({ caller }) func transferLand(to : Principal, landId : Nat) : async Bool {
     let marketplace = switch (marketplaceCanister) {
-      case null {
-        Runtime.trap("Unauthorized: Marketplace canister must be configured by admin before land transfers are enabled");
-      };
+      case null { Runtime.trap("Marketplace canister not configured") };
       case (?m) { m };
     };
     if (caller != marketplace) {
-      Runtime.trap("Unauthorized: Only the authorized marketplace canister can transfer land");
+      Runtime.trap("Unauthorized: Only the marketplace canister can transfer land");
     };
     for ((principal, lands) in landRegistry.entries()) {
       var landIndex : ?Nat = null;
@@ -515,11 +511,11 @@ actor CyberGenesisLandMint {
 
   public shared ({ caller }) func transferModifier(from : Principal, to : Principal, modifierInstanceId : Nat) : async Bool {
     let marketplace = switch (marketplaceCanister) {
-      case null { Runtime.trap("Unauthorized: Marketplace canister must be configured") };
+      case null { Runtime.trap("Marketplace canister not configured") };
       case (?m) { m };
     };
     if (caller != marketplace) {
-      Runtime.trap("Unauthorized: Only the authorized marketplace canister can transfer modifiers");
+      Runtime.trap("Unauthorized: Only the marketplace canister can transfer modifiers");
     };
     let fromInventory = switch (playerInventory.get(from)) {
       case (?inv) { inv };
