@@ -6,9 +6,9 @@ import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetLandData } from "../hooks/useQueries";
 import { type BeamPopupData, MapBeamPopup } from "./MapBeamPopup";
+import { InspectorModal } from "./marketplace/InspectorModal";
 
-const MAP_SIZE = 2560;
-const RAW_MAP_URL = "/assets/uploads/IMG_0133-1.webp";
+const MAP_SIZE = 6000;
 
 const BIOME_COLORS: Record<string, string> = {
   MYTHIC_VOID: "#cc00ff",
@@ -20,18 +20,71 @@ const BIOME_COLORS: Record<string, string> = {
   ISLAND_ARCHIPELAGO: "#00ffcc",
 };
 
+// Regions in 6000x6000 space
+// MYTHIC: center (3000,3000)
+// SNOW_PEAK: mid-left — closer to Forest
+// VOLCANIC_CRAG: mid-right — closer to Desert
+// FOREST_VALLEY: bottom-left
+// DESERT_DUNE: bottom-right
+// ISLAND_ARCHIPELAGO: bottom-center
 const BIOME_REGIONS: Record<
   string,
   { x: [number, number]; y: [number, number] }
 > = {
-  MYTHIC_VOID: { x: [1150, 1410], y: [1150, 1410] },
-  MYTHIC_AETHER: { x: [1150, 1410], y: [1150, 1410] },
-  VOLCANIC_CRAG: { x: [1800, 2300], y: [500, 1000] },
-  DESERT_DUNE: { x: [1700, 2350], y: [1700, 2300] },
-  FOREST_VALLEY: { x: [400, 900], y: [1200, 1700] },
-  SNOW_PEAK: { x: [300, 1000], y: [400, 800] },
-  ISLAND_ARCHIPELAGO: { x: [300, 1100], y: [1900, 2400] },
+  MYTHIC_VOID: { x: [2350, 3650], y: [2350, 3650] },
+  MYTHIC_AETHER: { x: [2350, 3650], y: [2350, 3650] },
+  SNOW_PEAK: { x: [650, 1950], y: [1850, 3150] },
+  VOLCANIC_CRAG: { x: [3850, 5150], y: [1850, 3150] },
+  FOREST_VALLEY: { x: [550, 1850], y: [3850, 5150] },
+  DESERT_DUNE: { x: [4050, 5350], y: [3850, 5150] },
+  ISLAND_ARCHIPELAGO: { x: [2050, 3750], y: [4550, 5850] },
 };
+
+// Image overlays: background + 6 regions
+const MAP_LAYERS = [
+  {
+    path: "/assets/uploads/map_mythic.webp",
+    bounds: [
+      [2300, 2300],
+      [3700, 3700],
+    ] as [[number, number], [number, number]],
+  },
+  {
+    path: "/assets/uploads/map_snow_peak.webp",
+    bounds: [
+      [1800, 600],
+      [3200, 2000],
+    ] as [[number, number], [number, number]],
+  },
+  {
+    path: "/assets/uploads/map_volcanic_crag.webp",
+    bounds: [
+      [1800, 3800],
+      [3200, 5200],
+    ] as [[number, number], [number, number]],
+  },
+  {
+    path: "/assets/uploads/map_forest_valley.webp",
+    bounds: [
+      [3800, 500],
+      [5200, 1900],
+    ] as [[number, number], [number, number]],
+  },
+  {
+    path: "/assets/uploads/map_desert_dune.webp",
+    bounds: [
+      [3800, 4000],
+      [5200, 5400],
+    ] as [[number, number], [number, number]],
+  },
+  {
+    path: "/assets/uploads/map_island_archipelago.webp",
+    bounds: [
+      [4500, 2000],
+      [5900, 3800],
+    ] as [[number, number], [number, number]],
+  },
+];
 
 function getPointInBiome(landId: number, biome: string): [number, number] {
   const seed = landId * 1337.42;
@@ -116,6 +169,9 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const [popup, setPopup] = useState<BeamPopupData | null>(null);
   const [popupPx, setPopupPx] = useState<{ x: number; y: number } | null>(null);
 
+  // Inspector state
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
   const principalId = identity?.getPrincipal().toString() ?? null;
@@ -180,12 +236,24 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       [0, 0],
       [MAP_SIZE, MAP_SIZE],
     ];
-    const overlay = L.imageOverlay(RAW_MAP_URL, bounds);
-    overlay.on("load", () => setIsImageLoaded(true));
-    overlay.on("error", () => setIsImageLoaded(true));
-    overlay.addTo(map);
+
+    // 1. Background layer (cosmos) — full 6000x6000
+    L.imageOverlay("/assets/uploads/map_background.webp", bounds, {
+      opacity: 1,
+    }).addTo(map);
+
+    // 2. Regional PNG overlays (with transparency) — trigger isImageLoaded on last
+    MAP_LAYERS.forEach((layer, idx) => {
+      const overlay = L.imageOverlay(layer.path, layer.bounds, { opacity: 1 });
+      if (idx === MAP_LAYERS.length - 1) {
+        overlay.on("load", () => setIsImageLoaded(true));
+        overlay.on("error", () => setIsImageLoaded(true));
+      }
+      overlay.addTo(map);
+    });
+
     map.setMaxBounds(bounds);
-    map.setView([MAP_SIZE / 2, MAP_SIZE / 2], -1, { animate: false });
+    map.setView([3000, 3000], -1.3, { animate: false });
     mapRef.current = map;
     beamLayerRef.current = L.layerGroup().addTo(map);
 
@@ -263,11 +331,13 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       let modCount = 0;
       let liveBiome = biome;
       let livePrincipal = principal;
+      let attachedModifications: any[] = [];
 
       try {
         const result = await actor?.getLandDataById(BigInt(landId));
         if (result && result.__kind__ === "Some") {
-          modCount = result.value.attachedModifications?.length ?? 0;
+          attachedModifications = result.value.attachedModifications ?? [];
+          modCount = attachedModifications.length;
           livePrincipal = result.value.principal?.toString() ?? principal;
           liveBiome = result.value.biome ?? biome;
         }
@@ -278,6 +348,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         biome: liveBiome,
         principal: livePrincipal,
         modCount,
+        attachedModifications,
         latlng,
         isOwner,
       });
@@ -395,7 +466,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     // 3. Zoom to owner's land once
     if (myCoords && !hasZoomedRef.current) {
       hasZoomedRef.current = true;
-      map.flyTo(myCoords, -0.3, {
+      map.flyTo(myCoords, -0.5, {
         animate: true,
         duration: 1.8,
         easeLinearity: 0.2,
@@ -407,6 +478,20 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   }, [allLandsPublic, myLands, principalId, isMapReady, handleBeamClick]);
 
   const showOverlay = !isEngineReady || !isImageLoaded || !isZoomReady;
+
+  // Build inspector listing/landData from popup
+  const inspectorListing = popup
+    ? {
+        itemId: BigInt(popup.landId),
+        seller: { toString: () => popup.principal },
+      }
+    : null;
+  const inspectorLandData = popup
+    ? {
+        biome: popup.biome,
+        attachedModifications: popup.attachedModifications,
+      }
+    : null;
 
   const content = (
     <div style={containerStyle}>
@@ -427,16 +512,28 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           background: "#000",
         }}
       >
-        {/* Popup card — rendered inside map container, absolute coordinates */}
+        {/* Popup card */}
         {popup && popupPx && (
           <MapBeamPopup
             popup={popup}
             popupPx={popupPx}
             containerRef={mapContainerRef}
             onClose={() => setPopup(null)}
+            onInspect={() => setInspectorOpen(true)}
           />
         )}
       </div>
+
+      {/* Inspector modal */}
+      {inspectorListing && inspectorLandData && (
+        <InspectorModal
+          open={inspectorOpen}
+          onClose={() => setInspectorOpen(false)}
+          listing={inspectorListing as any}
+          landData={inspectorLandData as any}
+        />
+      )}
+
       <button type="button" onClick={onClose} style={closeButtonStyle}>
         ✕ EXIT
       </button>

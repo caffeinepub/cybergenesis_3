@@ -15,6 +15,7 @@ export interface BeamPopupData {
   biome: string;
   principal: string;
   modCount: number;
+  attachedModifications: any[];
   latlng: any;
   isOwner: boolean;
 }
@@ -24,13 +25,20 @@ interface Props {
   popupPx: { x: number; y: number };
   containerRef: React.RefObject<HTMLDivElement | null>;
   onClose: () => void;
+  onInspect: () => void;
 }
 
 const CARD_W = 220;
-const CARD_H = 130;
+const CARD_H = 148;
 const MARGIN = 8;
 
-export function MapBeamPopup({ popup, popupPx, containerRef, onClose }: Props) {
+export function MapBeamPopup({
+  popup,
+  popupPx,
+  containerRef,
+  onClose,
+  onInspect,
+}: Props) {
   const container = containerRef.current;
   const cw = container ? container.clientWidth : window.innerWidth;
   const ch = container ? container.clientHeight : window.innerHeight;
@@ -58,6 +66,7 @@ export function MapBeamPopup({ popup, popupPx, containerRef, onClose }: Props) {
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
         .beam-popup-close:hover { color: rgba(255,255,255,0.7) !important; }
+        .beam-popup-mods:hover { background: rgba(255,255,255,0.04) !important; }
       `}</style>
       <div
         style={{
@@ -195,12 +204,21 @@ export function MapBeamPopup({ popup, popupPx, containerRef, onClose }: Props) {
             }}
           />
 
-          {/* Row 4: Mods counter */}
-          <div
+          {/* Row 4: Mods counter — clickable */}
+          <button
+            type="button"
+            className="beam-popup-mods"
+            onClick={onInspect}
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              cursor: "pointer",
+              borderRadius: 6,
+              padding: "4px 6px",
+              margin: "0 -6px",
+              transition: "background 0.2s",
+              background: "transparent",
             }}
           >
             <span
@@ -220,11 +238,12 @@ export function MapBeamPopup({ popup, popupPx, containerRef, onClose }: Props) {
                 color,
                 textShadow: `0 0 6px ${color}`,
                 fontFamily: "monospace",
+                borderBottom: `1px dashed ${color}60`,
               }}
             >
               {popup.modCount}/49
             </span>
-          </div>
+          </button>
         </div>
       </div>
     </>
