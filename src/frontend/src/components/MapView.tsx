@@ -174,6 +174,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const mapRef = useRef<any>(null);
   const beamLayerRef = useRef<any>(null);
   const hasZoomedRef = useRef(false);
+  const beamClickedRef = useRef(false);
 
   const [isEngineReady, setIsEngineReady] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -288,6 +289,10 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
 
     // Close popup on map click — but only when inspector is closed
     map.on("click", () => {
+      if (beamClickedRef.current) {
+        beamClickedRef.current = false;
+        return;
+      }
       if (!inspectorOpenRef.current) setPopup(null);
     });
 
@@ -364,6 +369,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         }
       } catch (_) {}
 
+      beamClickedRef.current = true;
       setPopup({
         landId,
         biome: liveBiome,
