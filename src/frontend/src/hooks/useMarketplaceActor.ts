@@ -65,10 +65,22 @@ export function useMarketplaceActor() {
       setIsFetching(true);
       setError(null);
 
+      // 8-second UI fallback: unblock UI if actor not ready yet
+      const fallbackTimer = setTimeout(() => {
+        if (isInitializingRef.current) {
+          console.log(
+            "[Marketplace Actor] 8s fallback: unblocking UI, retry continues in background",
+          );
+          setIsFetching(false);
+        }
+      }, 8000);
+
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
           console.log(
-            `[Marketplace Actor] Initialization attempt ${attempt + 1}/${MAX_RETRIES} with 120s timeout`,
+            `[Marketplace Actor] Initialization attempt ${
+              attempt + 1
+            }/${MAX_RETRIES} with 120s timeout`,
           );
 
           const marketplaceCanisterId =
@@ -77,6 +89,7 @@ export function useMarketplaceActor() {
             "be2us-64aaa-aaaaa-qaabq-cai";
 
           if (!marketplaceCanisterId) {
+            clearTimeout(fallbackTimer);
             throw new Error("Marketplace Canister ID not configured");
           }
 
@@ -122,6 +135,7 @@ export function useMarketplaceActor() {
           const newActor = await Promise.race([actorPromise, timeoutPromise]);
 
           console.log("[Marketplace Actor] ✓ Actor initialized successfully");
+          clearTimeout(fallbackTimer);
           setActor(newActor);
           setError(null);
           isInitializingRef.current = false;
@@ -135,6 +149,7 @@ export function useMarketplaceActor() {
           );
 
           if (errorMessage.includes("not configured")) {
+            clearTimeout(fallbackTimer);
             setError(errorMessage);
             setActor(null);
             isInitializingRef.current = false;
@@ -144,6 +159,7 @@ export function useMarketplaceActor() {
 
           if (attempt === MAX_RETRIES - 1) {
             console.error("[Marketplace Actor] All retry attempts exhausted");
+            clearTimeout(fallbackTimer);
             setError(
               `Failed after ${MAX_RETRIES} attempts with 120s timeout and gateway failover: ${errorMessage}`,
             );

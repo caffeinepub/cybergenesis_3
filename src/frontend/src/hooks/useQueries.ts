@@ -570,7 +570,7 @@ export function useGetAllActiveListings() {
     enabled: !!marketplaceActor && !mpFetching,
     // PATH B: poll every 30s + refetch on focus for near-instant reactive updates
     refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 2000,
   });
