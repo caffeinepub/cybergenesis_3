@@ -15,17 +15,31 @@ function CyberLoader() {
         inset: 0,
         width: "100vw",
         height: "100vh",
-        background: `#000 url('/assets/uploads/IMG_0509-2-1.webp') center/cover no-repeat`,
+        background: "#000",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-end",
+        justifyContent: "center",
         alignItems: "center",
         fontFamily: "'Orbitron', sans-serif",
         overflow: "hidden",
         zIndex: 9999,
-        paddingBottom: "8vh",
       }}
     >
+      {/* Background image — object-fit: cover keeps center visible on all screen sizes */}
+      <img
+        src="/assets/uploads/IMG_0509-2-1.webp"
+        alt=""
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center center",
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
         .loading-top {
@@ -83,7 +97,8 @@ function CyberLoader() {
           .metaverse-bottom { font-size: clamp(1rem, 5vw, 1.6rem);   letter-spacing: 2px; }
         }
       `}</style>
-      <div style={{ textAlign: "center" }}>
+      {/* Spinner text — positioned relative, centered over image */}
+      <div style={{ position: "relative", textAlign: "center", zIndex: 1 }}>
         <span className="loading-top">LOADING</span>
         <span className="metaverse-bottom">CYBERLAND METAVERSE</span>
       </div>
