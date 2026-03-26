@@ -127,12 +127,47 @@ const INCOME_SPLITS = [
   { label: "20% BURN", color: "#f87171" },
 ];
 
+const MAP_REGIONS = [
+  {
+    img: "/assets/uploads/forest_valley.WEBP",
+    name: "Forest Valley",
+    color: "#4ade80",
+  },
+  {
+    img: "/assets/uploads/island_archipelago.WEBP",
+    name: "Island Archipelago",
+    color: "#22d3ee",
+  },
+  {
+    img: "/assets/uploads/snow_peak.WEBP",
+    name: "Snow Peak",
+    color: "#60a5fa",
+  },
+  {
+    img: "/assets/uploads/desert_dune.WEBP",
+    name: "Desert Dune",
+    color: "#f59e0b",
+  },
+  {
+    img: "/assets/uploads/volcanic_crag.WEBP",
+    name: "Volcanic Crag",
+    color: "#f87171",
+  },
+  {
+    img: "/assets/uploads/mythic.WEBP",
+    name: "Mythic",
+    color: "#cc44ff",
+    note: "Void + Aether",
+  },
+];
+
 const NAV_ITEMS = [
   { label: "LAND NFT", id: "guide-land" },
   { label: "MODS", id: "guide-mods" },
   { label: "CACHES", id: "guide-caches" },
   { label: "CBR TOKEN", id: "guide-cbr" },
   { label: "MARKETPLACE", id: "guide-marketplace" },
+  { label: "MAP", id: "guide-map" },
   { label: "GOVERNANCE", id: "guide-governance" },
   { label: "TECH", id: "guide-tech" },
 ];
@@ -282,14 +317,17 @@ export default function Guide() {
       <div className="px-4 pb-10 flex flex-col gap-5">
         {/* ── 1. LAND NFT ────────────────────────────────────────── */}
         <SectionCard id="guide-land" accent="#cc44ff">
-          <div className="relative px-5 py-5 overflow-hidden">
+          <div className="relative px-5 py-5">
             <img
               src="/assets/uploads/mythic.WEBP"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 right-0 h-full w-1/2"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
               style={{
-                objectFit: "contain",
+                objectFit: "cover",
                 objectPosition: "right center",
                 opacity: 0.18,
                 pointerEvents: "none",
@@ -365,7 +403,7 @@ export default function Guide() {
 
               {/* Composable callout */}
               <div
-                className="rounded-xl px-4 py-4"
+                className="rounded-xl px-4 py-4 mb-3"
                 style={{
                   background: "rgba(204,68,255,0.08)",
                   border: "1px solid #cc44ff60",
@@ -401,20 +439,41 @@ export default function Guide() {
                   — does not exist anywhere else in the metaverse.
                 </p>
               </div>
+
+              {/* Auto-mint note */}
+              <div className="flex items-start gap-2 px-1">
+                <span
+                  className="flex-shrink-0 mt-0.5"
+                  style={{ color: "rgba(204,68,255,0.5)", fontSize: "10px" }}
+                >
+                  ✦
+                </span>
+                <p
+                  className="font-jetbrains text-[11px] leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.38)" }}
+                >
+                  Every new account receives one randomly minted LAND — biome
+                  and coordinates are pure chance. No two players start the
+                  same.
+                </p>
+              </div>
             </div>
           </div>
         </SectionCard>
 
         {/* ── 2. MODS ─────────────────────────────────────────────── */}
         <SectionCard id="guide-mods" accent="#ffd060">
-          <div className="relative px-5 py-5 overflow-hidden">
+          <div className="relative px-5 py-5">
             <img
               src="/assets/uploads/forest_valley.WEBP"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 left-0 h-full w-1/3"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
               style={{
-                objectFit: "contain",
+                objectFit: "cover",
                 objectPosition: "left center",
                 opacity: 0.15,
                 pointerEvents: "none",
@@ -587,6 +646,31 @@ export default function Guide() {
                   The more mods installed on your best land, the higher your
                   staking weight in Governance. Keeper (slot 49) is crafted and
                   region-bound. Install it only on the matching biome LAND.
+                </p>
+              </div>
+              {/* ICP Ecosystem note */}
+              <div
+                className="rounded-xl px-4 py-3 mt-3"
+                style={{
+                  background: "rgba(0,229,255,0.05)",
+                  border: "1px solid rgba(0,229,255,0.2)",
+                }}
+              >
+                <p
+                  className="font-orbitron text-[9px] font-bold tracking-widest mb-1.5"
+                  style={{ color: "#00e5ff", textShadow: "0 0 8px #00e5ff60" }}
+                >
+                  ICP ECOSYSTEM REFERENCES
+                </p>
+                <p
+                  className="font-jetbrains text-xs leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  Every modifier in CyberGenesis is a direct or indirect
+                  reference to a real project within the Internet Computer
+                  Protocol ecosystem — from protocols and dApps to
+                  infrastructure layers. Collecting and installing mods is a way
+                  to carry a piece of the ICP universe in your LAND.
                 </p>
               </div>
             </div>
@@ -935,16 +1019,192 @@ export default function Guide() {
           </div>
         </SectionCard>
 
-        {/* ── 6. GOVERNANCE ────────────────────────────────────────── */}
+        {/* ── 6. MAP ───────────────────────────────────────────────── */}
+        <SectionCard id="guide-map" accent="#00e5ff">
+          <div className="relative px-5 py-5">
+            <img
+              src="/assets/uploads/cover_map.WEBP"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-y-0 right-0 h-full w-1/2"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+              style={{
+                objectFit: "cover",
+                objectPosition: "right center",
+                opacity: 0.15,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
+            <div className="relative z-10">
+              <SectionTitle
+                title="WORLD MAP"
+                subtitle="Your Coordinates. Your Beam."
+                accent="#00e5ff"
+              />
+
+              {/* Block 1 — THE WORLD */}
+              <div className="mb-5">
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                  style={{ color: "#00e5ff", textShadow: "0 0 8px #00e5ff80" }}
+                >
+                  THE WORLD
+                </p>
+                <p
+                  className="font-jetbrains text-sm leading-relaxed mb-4"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  Floating island archipelagos drifting in deep space. Seven
+                  biomes, each occupying its own region. The MYTHIC region is
+                  shared between both Mythic Void and Mythic Aether lands.
+                </p>
+
+                {/* Compact region grid */}
+                <div
+                  className="grid gap-2"
+                  style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+                >
+                  {MAP_REGIONS.map((r) => (
+                    <div
+                      key={r.name}
+                      className="flex flex-col items-center gap-1.5 rounded-xl p-2"
+                      style={{
+                        background: `${r.color}0a`,
+                        border: `1px solid ${r.color}35`,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        className="rounded-lg overflow-hidden flex-shrink-0"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          border: `1px solid ${r.color}50`,
+                          boxShadow: `0 0 8px ${r.color}30`,
+                        }}
+                      >
+                        <img
+                          src={r.img}
+                          alt={r.name}
+                          onError={(e) => {
+                            (
+                              e.currentTarget as HTMLImageElement
+                            ).style.display = "none";
+                          }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="font-jetbrains text-[9px] text-center leading-tight"
+                        style={{ color: r.color }}
+                      >
+                        {r.name}
+                      </span>
+                      {"note" in r && r.note && (
+                        <span
+                          className="font-jetbrains text-[8px] text-center"
+                          style={{ color: "rgba(204,68,255,0.55)" }}
+                        >
+                          {r.note}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Block 2 — YOUR BEAM */}
+              <div
+                className="rounded-xl px-4 py-3 mb-4"
+                style={{
+                  background: "rgba(0,229,255,0.06)",
+                  border: "1px solid rgba(0,229,255,0.25)",
+                }}
+              >
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-2"
+                  style={{ color: "#00e5ff", textShadow: "0 0 8px #00e5ff80" }}
+                >
+                  YOUR BEAM
+                </p>
+                <p
+                  className="font-jetbrains text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  When you own a LAND, your coordinates are fixed permanently. A
+                  neon beam marks your exact spot — color matches your biome. No
+                  one else can claim your position.
+                </p>
+              </div>
+
+              {/* Block 3 — EXPLORE */}
+              <div
+                className="rounded-xl px-4 py-3 mb-4"
+                style={{
+                  background: "rgba(255,208,96,0.05)",
+                  border: "1px solid rgba(255,208,96,0.2)",
+                }}
+              >
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-2"
+                  style={{ color: "#ffd060", textShadow: "0 0 8px #ffd06080" }}
+                >
+                  EXPLORE
+                </p>
+                <p
+                  className="font-jetbrains text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  Other players' lands appear as thin golden beams. Click any
+                  beam to see land details: Biome, Land ID, Owner principal,
+                  number of installed mods.
+                </p>
+              </div>
+
+              {/* Bottom callout */}
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{
+                  background: "rgba(0,0,0,0.4)",
+                  border: "1px solid rgba(0,229,255,0.18)",
+                  boxShadow: "0 0 12px rgba(0,229,255,0.08)",
+                }}
+              >
+                <p
+                  className="font-jetbrains text-xs leading-relaxed"
+                  style={{
+                    color: "rgba(255,255,255,0.45)",
+                    fontStyle: "italic",
+                  }}
+                >
+                  "Click any beam on the map to inspect that land. Your own beam
+                  glows brighter."
+                </p>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ── 7. GOVERNANCE ────────────────────────────────────────── */}
         <SectionCard id="guide-governance" accent="#a855f7">
-          <div className="relative px-5 py-5 overflow-hidden">
+          <div className="relative px-5 py-5">
             <img
               src="/assets/uploads/volcanic_crag.WEBP"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 right-0 h-full w-1/3"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
               style={{
-                objectFit: "contain",
+                objectFit: "cover",
                 objectPosition: "right center",
                 opacity: 0.18,
                 pointerEvents: "none",
@@ -1091,7 +1351,7 @@ export default function Guide() {
           </div>
         </SectionCard>
 
-        {/* ── 7. TECHNICAL DETAILS ─────────────────────────────────────── */}
+        {/* ── 8. TECHNICAL DETAILS ─────────────────────────────────────── */}
         <TechnicalDetails />
       </div>
     </div>

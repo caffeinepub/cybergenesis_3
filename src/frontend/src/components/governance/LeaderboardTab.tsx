@@ -8,39 +8,34 @@ import {
   shortenPrincipal,
 } from "./GovernanceTypes";
 
+const PAGE_SIZE = 5;
+
 const RANK_COLORS = [
   {
     bg: "rgba(255,208,50,0.12)",
     border: "rgba(255,208,50,0.5)",
     glow: "rgba(255,208,50,0.3)",
-  }, // gold
+  },
   {
     bg: "rgba(180,188,200,0.12)",
     border: "rgba(180,188,200,0.5)",
     glow: "rgba(180,188,200,0.3)",
-  }, // silver
+  },
   {
     bg: "rgba(205,127,50,0.12)",
     border: "rgba(205,127,50,0.5)",
     glow: "rgba(205,127,50,0.3)",
-  }, // bronze
+  },
 ];
 
-// Slot color map for inspector grid
-const SLOT_COLORS = [
-  "#9CA3AF", // Common tier 1 (slots 1-15)
-  "#60A5FA", // Rare tier 2 (slots 16-30)
-  "#A855F7", // Legendary tier 3 (slots 31-42)
-  "#FACC15", // Mythic tier 4 (slots 43-48)
-  "#cc44ff", // Keeper slot 49
-];
+const SLOT_COLORS = ["#9CA3AF", "#60A5FA", "#A855F7", "#FACC15", "#cc44ff"];
 
 function getSlotColor(slotIndex: number): string {
   if (slotIndex < 15) return SLOT_COLORS[0];
   if (slotIndex < 30) return SLOT_COLORS[1];
   if (slotIndex < 42) return SLOT_COLORS[2];
   if (slotIndex < 48) return SLOT_COLORS[3];
-  return SLOT_COLORS[4]; // slot 49
+  return SLOT_COLORS[4];
 }
 
 function LeaderboardRow({
@@ -54,7 +49,7 @@ function LeaderboardRow({
   return (
     <button
       type="button"
-      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-[1.005] cursor-pointer text-left"
+      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all hover:scale-[1.005] cursor-pointer text-left"
       style={{
         background: rankStyle ? rankStyle.bg : "rgba(255,255,255,0.03)",
         border: rankStyle
@@ -67,7 +62,7 @@ function LeaderboardRow({
     >
       {/* Rank */}
       <div
-        className="w-7 font-orbitron font-bold text-sm text-center flex-shrink-0"
+        className="w-6 font-orbitron font-bold text-xs text-center flex-shrink-0"
         style={{
           color: rankStyle
             ? rank === 1
@@ -89,47 +84,47 @@ function LeaderboardRow({
       </div>
 
       {/* Biome — hidden on portrait mobile */}
-      <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
         <div
-          className="w-2 h-2 rounded-full"
+          className="w-1.5 h-1.5 rounded-full"
           style={{
             background: biomeColor,
-            boxShadow: `0 0 6px ${biomeColor}`,
+            boxShadow: `0 0 4px ${biomeColor}`,
           }}
         />
         <span
-          className="font-jetbrains text-[10px]"
+          className="font-jetbrains text-[9px]"
           style={{ color: biomeColor }}
         >
-          {entry.topBiome.replace("_", " ")}
+          {entry.topBiome.replace(/_/g, " ")}
         </span>
       </div>
 
       {/* Mods */}
       <div
-        className="w-8 text-center font-jetbrains text-xs flex-shrink-0"
+        className="w-7 text-center font-jetbrains text-xs flex-shrink-0"
         style={{ color: "rgba(255,255,255,0.4)" }}
       >
         {entry.maxMods.toString()}
       </div>
 
       {/* Stake */}
-      <div className="flex-shrink-0 text-right min-w-[60px]">
-        <p className="font-orbitron text-xs font-bold text-white/80">
+      <div className="flex-shrink-0 text-right min-w-[52px]">
+        <p className="font-orbitron text-[10px] font-bold text-white/80">
           {formatCBR(entry.stake)}
         </p>
-        <p className="font-jetbrains text-[9px] text-white/25">CBR</p>
+        <p className="font-jetbrains text-[8px] text-white/25">CBR</p>
       </div>
 
       {/* Weight */}
       <div
-        className="flex-shrink-0 text-right min-w-[44px]"
+        className="flex-shrink-0 text-right min-w-[40px]"
         style={{ color: biomeColor }}
       >
-        <p className="font-orbitron text-xs font-bold">
+        <p className="font-orbitron text-[10px] font-bold">
           {formatWeight(entry.weight)}
         </p>
-        <p className="font-jetbrains text-[9px] text-white/25">WGT</p>
+        <p className="font-jetbrains text-[8px] text-white/25">WGT</p>
       </div>
     </button>
   );
@@ -142,7 +137,6 @@ function InspectorModal({
   const biomeColor = getBiomeColor(entry.topBiome);
   const maxMods = Number(entry.maxMods);
 
-  // Build 49-slot grid
   const slots = Array.from({ length: 49 }, (_, i) => ({
     index: i,
     filled: i < maxMods,
@@ -154,7 +148,6 @@ function InspectorModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
     >
-      {/* Backdrop click area */}
       <button
         type="button"
         className="absolute inset-0"
@@ -171,17 +164,14 @@ function InspectorModal({
           boxShadow: `0 0 40px ${biomeColor}30, 0 8px 32px rgba(0,0,0,0.8)`,
         }}
       >
-        {/* Top accent bar */}
         <div
           style={{
             height: "2px",
             background: `linear-gradient(90deg, transparent 0%, ${biomeColor} 30%, ${biomeColor} 70%, transparent 100%)`,
-            boxShadow: `0 0 8px ${biomeColor}`,
           }}
         />
 
         <div className="px-5 py-5">
-          {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <p
               className="font-orbitron font-black text-sm tracking-widest"
@@ -207,7 +197,6 @@ function InspectorModal({
             </button>
           </div>
 
-          {/* Principal */}
           <div
             className="rounded-xl px-3 py-2.5 mb-4"
             style={{
@@ -226,7 +215,6 @@ function InspectorModal({
             </p>
           </div>
 
-          {/* Biome */}
           <div className="flex items-center gap-3 mb-4">
             <div
               className="w-3 h-3 rounded-full flex-shrink-0"
@@ -254,7 +242,6 @@ function InspectorModal({
             </div>
           </div>
 
-          {/* Lv. X/49 + grid */}
           <div className="mb-4">
             <p
               className="font-orbitron text-[10px] tracking-widest mb-2"
@@ -271,7 +258,6 @@ function InspectorModal({
             >
               Lv. {maxMods}/49
             </p>
-            {/* 7×7 compact grid */}
             <div
               className="grid gap-[3px]"
               style={{ gridTemplateColumns: "repeat(7, 20px)" }}
@@ -299,7 +285,6 @@ function InspectorModal({
             </div>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-2 gap-2">
             <div
               className="rounded-xl px-3 py-2.5"
@@ -317,12 +302,7 @@ function InspectorModal({
               <p className="font-orbitron text-sm font-bold text-white/80">
                 {formatCBR(entry.stake)}
               </p>
-              <p
-                className="font-jetbrains text-[9px]"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
-                CBR
-              </p>
+              <p className="font-jetbrains text-[9px] text-white/25">CBR</p>
             </div>
             <div
               className="rounded-xl px-3 py-2.5"
@@ -343,10 +323,7 @@ function InspectorModal({
               >
                 {formatWeight(entry.weight)}
               </p>
-              <p
-                className="font-jetbrains text-[9px]"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <p className="font-jetbrains text-[9px] text-white/25">
                 voting power
               </p>
             </div>
@@ -357,20 +334,89 @@ function InspectorModal({
   );
 }
 
+function PaginationBar({
+  page,
+  totalPages,
+  accentColor,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  accentColor: string;
+  onChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 pt-3">
+      <button
+        type="button"
+        disabled={page === 0}
+        onClick={() => onChange(page - 1)}
+        className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all disabled:opacity-30"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: `1px solid ${accentColor}30`,
+          color: accentColor,
+        }}
+      >
+        ‹
+      </button>
+
+      {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
+        <button
+          key={pageNum}
+          type="button"
+          onClick={() => onChange(pageNum)}
+          className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all"
+          style={{
+            background:
+              pageNum === page ? `${accentColor}25` : "rgba(255,255,255,0.04)",
+            border: `1px solid ${
+              pageNum === page ? `${accentColor}70` : "rgba(255,255,255,0.08)"
+            }`,
+            color: pageNum === page ? accentColor : "rgba(255,255,255,0.35)",
+            boxShadow: pageNum === page ? `0 0 10px ${accentColor}40` : "none",
+          }}
+        >
+          {pageNum + 1}
+        </button>
+      ))}
+
+      <button
+        type="button"
+        disabled={page === totalPages - 1}
+        onClick={() => onChange(page + 1)}
+        className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all disabled:opacity-30"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: `1px solid ${accentColor}30`,
+          color: accentColor,
+        }}
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 export function LeaderboardTab() {
   const { data: entries = [], isLoading } = useGetLeaderboard(BigInt(50));
   const [inspectedEntry, setInspectedEntry] =
     useState<GStakerLeaderboardEntry | null>(null);
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  const pagedEntries = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <>
       <div
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-2"
         style={{ animation: "govCardIn 0.2s ease-out forwards" }}
       >
         {/* Title */}
         <p
-          className="font-orbitron font-bold text-sm tracking-widest"
+          className="font-orbitron font-bold text-sm tracking-widest mb-1"
           style={{ color: "rgba(255,255,255,0.6)" }}
         >
           STAKING LEADERBOARD
@@ -378,25 +424,25 @@ export function LeaderboardTab() {
 
         {/* Column headers */}
         <div
-          className="flex items-center gap-3 px-4 py-2"
+          className="flex items-center gap-2 px-3 py-2"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <div className="w-7 font-orbitron text-[9px] tracking-widest text-white/25">
+          <div className="w-6 font-orbitron text-[9px] tracking-widest text-white/25">
             #
           </div>
           <div className="flex-1 font-orbitron text-[9px] tracking-widest text-white/25">
             PRINCIPAL
           </div>
-          <div className="hidden sm:block w-20 font-orbitron text-[9px] tracking-widest text-white/25">
+          <div className="hidden sm:block font-orbitron text-[9px] tracking-widest text-white/25">
             BIOME
           </div>
-          <div className="w-8 font-orbitron text-[9px] tracking-widest text-white/25 text-center">
+          <div className="w-7 font-orbitron text-[9px] tracking-widest text-white/25 text-center">
             MODS
           </div>
-          <div className="min-w-[60px] font-orbitron text-[9px] tracking-widest text-white/25 text-right">
+          <div className="min-w-[52px] font-orbitron text-[9px] tracking-widest text-white/25 text-right">
             STAKE
           </div>
-          <div className="min-w-[44px] font-orbitron text-[9px] tracking-widest text-white/25 text-right">
+          <div className="min-w-[40px] font-orbitron text-[9px] tracking-widest text-white/25 text-right">
             WGT
           </div>
         </div>
@@ -427,15 +473,23 @@ export function LeaderboardTab() {
           </div>
         )}
 
-        {/* Rows */}
-        {entries.map((entry, i) => (
+        {/* Rows — current page only */}
+        {pagedEntries.map((entry, i) => (
           <LeaderboardRow
             key={entry.principal.toString()}
             entry={entry}
-            rank={i + 1}
+            rank={page * PAGE_SIZE + i + 1}
             onClick={() => setInspectedEntry(entry)}
           />
         ))}
+
+        {/* Pagination */}
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          accentColor="#ffd032"
+          onChange={(p) => setPage(p)}
+        />
       </div>
 
       {/* Inspector Modal */}

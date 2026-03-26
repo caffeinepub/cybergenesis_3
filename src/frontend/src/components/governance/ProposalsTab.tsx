@@ -1,4 +1,3 @@
-import { Vote } from "lucide-react";
 import { useState } from "react";
 import type { GProposal } from "../../governance-backend.d";
 import {
@@ -12,6 +11,8 @@ import {
   formatCBR,
   shortenPrincipal,
 } from "./GovernanceTypes";
+
+const PAGE_SIZE = 4;
 
 interface ProposalsTabProps {
   onCreateClick: () => void;
@@ -79,17 +80,12 @@ function ProposalCard({ proposal }: { proposal: GProposal }) {
           </span>
         </div>
 
-        {/* Title */}
         <h3 className="font-orbitron font-bold text-base text-white mb-1 leading-snug">
           {proposal.title}
         </h3>
-
-        {/* Proposer */}
         <p className="font-jetbrains text-[10px] text-white/30 mb-3">
           by {shortenPrincipal(proposal.proposer.toString())}
         </p>
-
-        {/* Description */}
         <p className="font-jetbrains text-xs text-white/50 leading-relaxed mb-4 line-clamp-3">
           {proposal.description}
         </p>
@@ -198,8 +194,79 @@ function ProposalCard({ proposal }: { proposal: GProposal }) {
   );
 }
 
+function PaginationBar({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const accent = "#cc44ff";
+  return (
+    <div className="flex items-center justify-center gap-2 pt-2">
+      <button
+        type="button"
+        disabled={page === 0}
+        onClick={() => onChange(page - 1)}
+        className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all disabled:opacity-30"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: `1px solid ${accent}30`,
+          color: accent,
+        }}
+      >
+        ‹
+      </button>
+
+      {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
+        <button
+          key={pageNum}
+          type="button"
+          onClick={() => onChange(pageNum)}
+          className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all"
+          style={{
+            background:
+              pageNum === page ? `${accent}25` : "rgba(255,255,255,0.04)",
+            border: `1px solid ${
+              pageNum === page ? `${accent}70` : "rgba(255,255,255,0.08)"
+            }`,
+            color: pageNum === page ? accent : "rgba(255,255,255,0.35)",
+            boxShadow: pageNum === page ? `0 0 10px ${accent}40` : "none",
+          }}
+        >
+          {pageNum + 1}
+        </button>
+      ))}
+
+      <button
+        type="button"
+        disabled={page === totalPages - 1}
+        onClick={() => onChange(page + 1)}
+        className="w-8 h-8 rounded-lg font-orbitron text-xs font-bold transition-all disabled:opacity-30"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: `1px solid ${accent}30`,
+          color: accent,
+        }}
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 export function ProposalsTab({ onCreateClick }: ProposalsTabProps) {
   const { data: proposals = [], isLoading } = useGetAllActiveProposals();
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(proposals.length / PAGE_SIZE));
+  const pagedProposals = proposals.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -214,7 +281,7 @@ export function ProposalsTab({ onCreateClick }: ProposalsTabProps) {
         <button
           type="button"
           onClick={onCreateClick}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-orbitron text-xs font-bold tracking-wider transition-all"
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-orbitron text-xs font-bold tracking-wider transition-all hover:scale-[1.03]"
           style={{
             background: "rgba(204,68,255,0.15)",
             border: "1px solid rgba(204,68,255,0.5)",
@@ -223,7 +290,8 @@ export function ProposalsTab({ onCreateClick }: ProposalsTabProps) {
           }}
           data-ocid="proposals.open_modal_button"
         >
-          CREATE ↗
+          <span style={{ fontSize: "14px", lineHeight: 1 }}>+</span>
+          CREATE
         </button>
       </div>
 
@@ -247,7 +315,6 @@ export function ProposalsTab({ onCreateClick }: ProposalsTabProps) {
           }}
           data-ocid="proposals.empty_state"
         >
-          <Vote size={36} style={{ color: "rgba(255,255,255,0.2)" }} />
           <p className="font-orbitron text-sm text-white/30 tracking-wider">
             NO ACTIVE PROPOSALS
           </p>
@@ -257,12 +324,22 @@ export function ProposalsTab({ onCreateClick }: ProposalsTabProps) {
         </div>
       )}
 
-      {/* Proposal cards */}
-      {proposals.map((p, i) => (
-        <div key={p.id.toString()} data-ocid={`proposals.item.${i + 1}`}>
+      {/* Proposal cards — current page only */}
+      {pagedProposals.map((p, i) => (
+        <div
+          key={p.id.toString()}
+          data-ocid={`proposals.item.${page * PAGE_SIZE + i + 1}`}
+        >
           <ProposalCard proposal={p} />
         </div>
       ))}
+
+      {/* Pagination */}
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        onChange={(p) => setPage(p)}
+      />
     </div>
   );
 }
