@@ -1,4 +1,4 @@
-// Static modifier catalog with 48 entries
+// Static modifier catalog with 48 entries + 7 Keeper entries (slot 49)
 
 export interface PlannedModifier {
   id: number;
@@ -7,10 +7,20 @@ export interface PlannedModifier {
   asset_url: string;
 }
 
+export interface KeeperModifier {
+  id: 49;
+  region: string;
+  biome: string;
+  name: string;
+  asset_url: string;
+  color: string;
+}
+
 const BASE =
   "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Mods/";
 
 export const PLANNED_MODIFIER_CATALOG: PlannedModifier[] = [
+  // ── Tier 1 Common · Slots 1–15 ──────────────────────────────────────────
   {
     id: 1,
     name: "RuBaRu",
@@ -91,6 +101,7 @@ export const PLANNED_MODIFIER_CATALOG: PlannedModifier[] = [
     rarity_tier: 1,
     asset_url: `${BASE}modifier_15.webp`,
   },
+  // ── Tier 2 Rare · Slots 16–30 ───────────────────────────────────────────
   {
     id: 16,
     name: "Plug",
@@ -176,6 +187,7 @@ export const PLANNED_MODIFIER_CATALOG: PlannedModifier[] = [
     rarity_tier: 2,
     asset_url: `${BASE}modifier_30.webp`,
   },
+  // ── Tier 3 Legendary · Slots 31–42 ──────────────────────────────────────
   {
     id: 31,
     name: "CLOWN",
@@ -248,6 +260,7 @@ export const PLANNED_MODIFIER_CATALOG: PlannedModifier[] = [
     rarity_tier: 3,
     asset_url: `${BASE}modifier_42.webp`,
   },
+  // ── Tier 4 Mythic · Slots 43–48 ─────────────────────────────────────────
   {
     id: 43,
     name: "OISY",
@@ -279,13 +292,78 @@ export const PLANNED_MODIFIER_CATALOG: PlannedModifier[] = [
     rarity_tier: 4,
     asset_url: `${BASE}modifier_48.webp`,
   },
+  // ── Slot 49 is reserved for the Region Keeper (see KEEPER_CATALOG) ──────
 ];
 
+// ── Keeper Catalog · Slot 49 · One per Region ────────────────────────────────
+// Keepers are NOT obtainable from caches. They are crafted.
+// Each Keeper can only be installed on a LAND matching its region.
+export const KEEPER_CATALOG: KeeperModifier[] = [
+  {
+    id: 49,
+    region: "FOREST_VALLEY",
+    biome: "Forest Valley",
+    name: "Forest Keeper",
+    asset_url: `${BASE}modifier_49_forest.webp`,
+    color: "#4ade80",
+  },
+  {
+    id: 49,
+    region: "ISLAND_ARCHIPELAGO",
+    biome: "Island Archipelago",
+    name: "Island Keeper",
+    asset_url: `${BASE}modifier_49_island.webp`,
+    color: "#22d3ee",
+  },
+  {
+    id: 49,
+    region: "SNOW_PEAK",
+    biome: "Snow Peak",
+    name: "Snow Keeper",
+    asset_url: `${BASE}modifier_49_snow.webp`,
+    color: "#60a5fa",
+  },
+  {
+    id: 49,
+    region: "DESERT_DUNE",
+    biome: "Desert Dune",
+    name: "Desert Keeper",
+    asset_url: `${BASE}modifier_49_desert.webp`,
+    color: "#f59e0b",
+  },
+  {
+    id: 49,
+    region: "VOLCANIC_CRAG",
+    biome: "Volcanic Crag",
+    name: "Volcanic Keeper",
+    asset_url: `${BASE}modifier_49_volcanic.webp`,
+    color: "#f87171",
+  },
+  {
+    id: 49,
+    region: "MYTHIC_VOID",
+    biome: "Mythic Void",
+    name: "Void Keeper",
+    asset_url: `${BASE}modifier_49_void.webp`,
+    color: "#a855f7",
+  },
+  {
+    id: 49,
+    region: "MYTHIC_AETHER",
+    biome: "Mythic Aether",
+    name: "Aether Keeper",
+    asset_url: `${BASE}modifier_49_aether.webp`,
+    color: "#cc44ff",
+  },
+];
+
+// ── Rarity colour map (tier → hex) ───────────────────────────────────────────
 export const RARITY_COLORS: Record<number, string> = {
-  1: "#9CA3AF",
-  2: "#60A5FA",
-  3: "#A855F7",
-  4: "#FACC15",
+  1: "#9CA3AF", // Common
+  2: "#60A5FA", // Rare
+  3: "#A855F7", // Legendary
+  4: "#FACC15", // Mythic
+  5: "#cc44ff", // Keeper (slot 49)
 };
 
 export const RARITY_GLOW: Record<number, string> = {
@@ -293,4 +371,23 @@ export const RARITY_GLOW: Record<number, string> = {
   2: "rgba(96,165,250,0.45)",
   3: "rgba(168,85,247,0.55)",
   4: "rgba(250,204,21,0.7)",
+  5: "rgba(204,68,255,0.7)", // Keeper
+};
+
+// ── Tier display names ────────────────────────────────────────────────────────
+export const TIER_NAMES: Record<number, string> = {
+  1: "COMMON",
+  2: "RARE",
+  3: "LEGENDARY",
+  4: "MYTHIC",
+  5: "KEEPER",
+};
+
+// ── Slot ranges per tier ──────────────────────────────────────────────────────
+export const TIER_SLOTS: Record<number, string> = {
+  1: "Slots 1–15",
+  2: "Slots 16–30",
+  3: "Slots 31–42",
+  4: "Slots 43–48",
+  5: "Slot 49",
 };

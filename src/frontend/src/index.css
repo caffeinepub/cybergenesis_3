@@ -435,3 +435,28 @@ body {
   display: flex !important;
   flex-direction: column !important;
 }
+
+/* Governance card entrance animation */
+@keyframes govCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Land smoke pulse animation */
+@keyframes landSmoke {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}

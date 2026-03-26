@@ -3,22 +3,27 @@ import { formatTokenBalance } from "@/lib/tokenUtils";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type {
+  GProposal,
+  GStakeInfo,
+  GStakeResult,
+  GStakerLeaderboardEntry,
+  GVoteRecord,
+  GVoteResult,
+} from "../governance-backend";
 import { useActor } from "./useActor";
+import { useGovernanceActor } from "./useGovernanceActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 import { useMarketplaceActor } from "./useMarketplaceActor";
 import { useTokenActor } from "./useTokenActor";
 
-// Placeholder types for governance and marketplace (not yet in backend)
-interface Proposal {
-  id: bigint;
-  title: string;
-  description: string;
-  proposer: Principal;
-  createdAt: Time;
-  votesYes: bigint;
-  votesNo: bigint;
-  isActive: boolean;
-}
+// Local types for governance (re-exported for component use)
+export type {
+  GProposal as Proposal,
+  GStakeInfo,
+  GStakerLeaderboardEntry,
+  GVoteRecord,
+};
 
 enum ItemType {
   Land = "Land",
@@ -33,49 +38,6 @@ interface Listing {
   price: bigint;
   isActive: boolean;
 }
-
-type StakeResult =
-  | {
-      __kind__: "success";
-      success: {
-        newStake: bigint;
-      };
-    }
-  | {
-      __kind__: "insufficientTokens";
-      insufficientTokens: {
-        required: bigint;
-        available: bigint;
-      };
-    }
-  | {
-      __kind__: "transferFailed";
-      transferFailed: string;
-    };
-
-type VoteResult =
-  | {
-      __kind__: "success";
-      success: {
-        weight: bigint;
-      };
-    }
-  | {
-      __kind__: "proposalNotFound";
-      proposalNotFound: null;
-    }
-  | {
-      __kind__: "proposalNotActive";
-      proposalNotActive: null;
-    }
-  | {
-      __kind__: "alreadyVoted";
-      alreadyVoted: null;
-    }
-  | {
-      __kind__: "notStaker";
-      notStaker: null;
-    };
 
 type BuyResult =
   | {
@@ -460,25 +422,61 @@ export function useGetTopLands() {
   });
 }
 
-// Governance Hooks (placeholder implementations - need backend integration)
+// ─── Governance Hooks — wired to live governance actor (embedded in backend) ────────
+
+export function useGetMyStakeInfo() {
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<GStakeInfo>({
+    queryKey: ["myStakeInfo"],
+    queryFn: async () => {
+      if (!actor)
+        return {
+          stake: BigInt(0),
+          lockEndsAt: BigInt(0),
+          weight: BigInt(0),
+          unclaimedRewards: BigInt(0),
+          claimableVest: BigInt(0),
+          pendingVest: BigInt(0),
+        } as GStakeInfo;
+      return actor.gGetMyStakeInfo();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+    retry: 1,
+  });
+}
+
+// Backward-compatible: returns just the stake amount
 export function useGetStakedBalance() {
+  const { actor, isFetching } = useGovernanceActor();
+
   return useQuery({
     queryKey: ["stakedBalance"],
-    queryFn: async () => BigInt(0),
-    enabled: false,
+    queryFn: async () => {
+      if (!actor) return BigInt(0);
+      const info = await actor.gGetMyStakeInfo();
+      return info.stake;
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+    retry: 1,
   });
 }
 
 export function useStakeTokens() {
+  const { actor } = useGovernanceActor();
   const queryClient = useQueryClient();
 
-  return useMutation<StakeResult, Error, bigint>({
+  return useMutation<GStakeResult, Error, bigint>({
     mutationFn: async (amount: bigint) => {
-      console.log("Staking tokens:", amount);
-      throw new Error("Governance staking not yet implemented");
+      if (!actor) throw new Error("Governance actor not available");
+      return actor.gStakeTokens(amount);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stakedBalance"] });
+      queryClient.invalidateQueries({ queryKey: ["myStakeInfo"] });
+      queryClient.invalidateQueries({ queryKey: ["govLeaderboard"] });
       toast.success("Tokens staked!");
     },
     onError: (error: any) => {
@@ -488,59 +486,146 @@ export function useStakeTokens() {
   });
 }
 
+export function useUnstakeTokens() {
+  const { actor } = useGovernanceActor();
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, bigint>({
+    mutationFn: async (amount: bigint) => {
+      if (!actor) throw new Error("Governance actor not available");
+      return actor.gUnstakeTokens(amount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stakedBalance"] });
+      queryClient.invalidateQueries({ queryKey: ["myStakeInfo"] });
+      queryClient.invalidateQueries({ queryKey: ["govLeaderboard"] });
+      toast.success("Tokens unstaked!");
+    },
+    onError: (error: any) => {
+      const msg = error?.message || "Unknown error";
+      toast.error(
+        msg.includes("locked")
+          ? "Tokens are locked for 14 days"
+          : `Unstake error: ${msg}`,
+      );
+    },
+  });
+}
+
+export function useClaimVestedRewards() {
+  const { actor } = useGovernanceActor();
+  const queryClient = useQueryClient();
+
+  return useMutation<bigint, Error, void>({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Governance actor not available");
+      return actor.gClaimVestedRewards();
+    },
+    onSuccess: (amount) => {
+      queryClient.invalidateQueries({ queryKey: ["myStakeInfo"] });
+      queryClient.invalidateQueries({ queryKey: ["tokenBalance"] });
+      toast.success(`Claimed ${amount.toString()} CBR rewards!`);
+    },
+    onError: (error: any) => {
+      toast.error(`Claim error: ${error.message || "Unknown error"}`);
+    },
+  });
+}
+
+export function useGetAllProposals() {
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<GProposal[]>({
+    queryKey: ["allProposals"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.gGetAllProposals();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+    retry: 1,
+  });
+}
+
 export function useGetAllActiveProposals() {
-  return useQuery<Proposal[]>({
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<GProposal[]>({
     queryKey: ["activeProposals"],
     queryFn: async () => {
-      console.log("Fetching active proposals...");
-      return [];
+      if (!actor) return [];
+      return actor.gGetActiveProposals();
     },
-    enabled: false,
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+    retry: 1,
+  });
+}
+
+export function useGetMyVotes() {
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<GVoteRecord[]>({
+    queryKey: ["myVotes"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.gGetMyVotes();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+    retry: 1,
   });
 }
 
 export function useCreateProposal() {
+  const { actor } = useGovernanceActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       title,
       description,
-    }: { title: string; description: string }) => {
-      console.log("Creating proposal:", title, description);
-      throw new Error("Governance proposal creation not yet implemented");
+      category = "roadmap",
+    }: { title: string; description: string; category?: string }) => {
+      if (!actor) throw new Error("Governance actor not available");
+      return actor.gCreateProposal(title, description, category);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeProposals"] });
+      queryClient.invalidateQueries({ queryKey: ["allProposals"] });
       toast.success("Proposal created!");
     },
     onError: (error: any) => {
       console.error("Create proposal error:", error);
-      toast.error(
-        `Proposal creation error: ${error.message || "Unknown error"}`,
-      );
+      toast.error(`Proposal error: ${error.message || "Unknown error"}`);
     },
   });
 }
 
 export function useVote() {
+  const { actor } = useGovernanceActor();
   const queryClient = useQueryClient();
 
   return useMutation<
-    VoteResult,
+    GVoteResult,
     Error,
     { proposalId: bigint; choice: boolean }
   >({
-    mutationFn: async ({
-      proposalId,
-      choice,
-    }: { proposalId: bigint; choice: boolean }) => {
-      console.log("Voting on proposal:", proposalId, choice);
-      throw new Error("Governance voting not yet implemented");
+    mutationFn: async ({ proposalId, choice }) => {
+      if (!actor) throw new Error("Governance actor not available");
+      return actor.gVote(proposalId, choice);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["activeProposals"] });
-      toast.success("Vote recorded!");
+      queryClient.invalidateQueries({ queryKey: ["allProposals"] });
+      queryClient.invalidateQueries({ queryKey: ["myVotes"] });
+      if ((result as any).notStaker !== undefined) {
+        toast.error("You must stake tokens to vote");
+      } else if ((result as any).alreadyVoted !== undefined) {
+        toast.error("You already voted on this proposal");
+      } else {
+        toast.success("Vote recorded!");
+      }
     },
     onError: (error: any) => {
       console.error("Vote error:", error);
@@ -549,7 +634,37 @@ export function useVote() {
   });
 }
 
-// ─── Marketplace Hooks — wired to live marketplaceActor ───────────────────────
+export function useGetLeaderboard(limit = BigInt(50)) {
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<GStakerLeaderboardEntry[]>({
+    queryKey: ["govLeaderboard", limit.toString()],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.gGetLeaderboard(limit);
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60000,
+    retry: 1,
+  });
+}
+
+export function useGetTreasuryBalance() {
+  const { actor, isFetching } = useGovernanceActor();
+
+  return useQuery<bigint>({
+    queryKey: ["treasuryBalance"],
+    queryFn: async () => {
+      if (!actor) return BigInt(0);
+      return actor.gGetTreasuryBalance();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60000,
+    retry: 1,
+  });
+}
+
+// ─── Marketplace Hooks — wired to live marketplaceActor ─────────────────────
 
 export function useGetAllActiveListings() {
   const { actor: marketplaceActor, isFetching: mpFetching } =

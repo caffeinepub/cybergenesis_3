@@ -403,6 +403,16 @@ actor CyberGenesisLandMint {
     found
   };
 
+  public query ({ caller }) func getLandsByOwner(owner : Principal) : async [LandData] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    switch (landRegistry.get(owner)) {
+      case (?lands) { lands };
+      case null { [] };
+    };
+  };
+
   // ── Marketplace / Governance / Token Canister Config ──
 
   public shared ({ caller }) func setMarketplaceCanister(marketplace : Principal) : async () {
@@ -654,14 +664,21 @@ actor CyberGenesisLandMint {
           landRegistry.add(caller, updatedLands);
         };
         let randVal = nextModifierInstanceId % 100;
-        let tier = if (randVal < 70) { 1 } else if (randVal < 95) { 2 } else { 3 };
+        // Tier drops vary by cache tier: T1=Common only, T2=Common+Rare, T3=all tiers incl Mythic
+        let tier = switch (cache.tier) {
+          case 1 { if (randVal < 90) { 1 } else { 2 } };
+          case 2 { if (randVal < 50) { 1 } else if (randVal < 90) { 2 } else { 3 } };
+          case 3 { if (randVal < 30) { 1 } else if (randVal < 65) { 2 } else if (randVal < 90) { 3 } else { 4 } };
+          case _ { 1 };
+        };
         let multiplier = switch (tier) {
-          case 1 { 1.1 }; case 2 { 1.25 }; case 3 { 1.5 }; case _ { 1.0 };
+          case 1 { 1.1 }; case 2 { 1.25 }; case 3 { 1.5 }; case 4 { 2.0 }; case _ { 1.0 };
         };
         let modelUrl = switch (tier) {
           case 1 { "https://assets.cybergenesis.io/models/tier1.glb" };
           case 2 { "https://assets.cybergenesis.io/models/tier2.glb" };
           case 3 { "https://assets.cybergenesis.io/models/tier3.glb" };
+          case 4 { "https://assets.cybergenesis.io/models/tier4.glb" };
           case _ { "https://assets.cybergenesis.io/models/tier1.glb" };
         };
         let modifierInstanceId = nextModifierInstanceId;
@@ -725,6 +742,9 @@ actor CyberGenesisLandMint {
             });
             playerInventory.add(caller, updatedInventory);
             let land = userLands[index];
+            if (land.attachedModifications.size() >= 49) {
+              Runtime.trap("Slot limit reached: maximum 49 modifiers per land");
+            };
             let updatedLand = { land with
               attachedModifications = ([land.attachedModifications, [userInventory[modIndex]]]).flatten();
             };
@@ -839,7 +859,427 @@ actor CyberGenesisLandMint {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can query modifiers by tier");
     };
-    modifiers.filter(func(m : Modifier) : Bool { m.rarity_tier == tier });
+    modifiers.filter(func(m : Modifier) : Bool { m.rarity_tier == tier })
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Governance: Staking, Proposals, Voting, Rewards, Leaderboard ─────────
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Governance Types ──
+
+  public type GStakeEntry = {
+    amount : Nat;
+    stakedAt : Time.Time;
+    rewardCheckpoint : Nat;
+  };
+
+  public type GProposal = {
+    id : Nat;
+    title : Text;
+    description : Text;
+    category : Text;
+    proposer : Principal;
+    createdAt : Time.Time;
+    votesYes : Nat;
+    votesNo : Nat;
+    isActive : Bool;
+  };
+
+  public type GVoteRecord = {
+    proposalId : Nat;
+    choice : Bool;
+    weight : Nat;
+  };
+
+  public type GVestingEntry = {
+    amount : Nat;
+    startTime : Time.Time;
+    claimed : Nat;
+  };
+
+  public type GStakerLeaderboardEntry = {
+    principal : Principal;
+    stake : Nat;
+    weight : Nat;
+    topBiome : Text;
+    maxMods : Nat;
+    unclaimedRewards : Nat;
+  };
+
+  public type GStakeInfo = {
+    stake : Nat;
+    lockEndsAt : Time.Time;
+    weight : Nat;
+    unclaimedRewards : Nat;
+    claimableVest : Nat;
+    pendingVest : Nat;
+  };
+
+  public type GStakeResult = {
+    #success : { newStake : Nat };
+    #insufficientTokens : { required : Nat; available : Nat };
+    #transferFailed : Text;
+  };
+
+  public type GVoteResult = {
+    #success : { weight : Nat };
+    #proposalNotFound;
+    #proposalNotActive;
+    #alreadyVoted;
+    #notStaker;
+  };
+
+  // ── Governance State ──
+
+  let governanceStakes = Map.empty<Principal, GStakeEntry>();
+  let governanceVotes = Map.empty<Principal, [GVoteRecord]>();
+  let governanceVesting = Map.empty<Principal, GVestingEntry>();
+  var governanceProposals : [GProposal] = [];
+  var gNextProposalId : Nat = 0;
+  var gRewardPerToken : Nat = 0;
+  var gTotalWeightedStake : Nat = 0;
+  var gTreasuryBalance : Nat = 0;
+  var gDeveloperFund : Nat = 0;
+
+  let G_REWARD_PRECISION : Nat = 1_000_000_000;
+  let G_LOCK_PERIOD_NS : Int = 1_209_600_000_000_000;  // 14 days
+  let G_VEST_PERIOD_NS : Int = 604_800_000_000_000;    // 7 days
+
+  // ── Governance Helpers ──
+
+  func getBiomeMultiplierBP(biome : Text) : Nat {
+    if (biome == "MYTHIC_VOID" or biome == "MYTHIC_AETHER") { 150 }
+    else if (biome == "SNOW_PEAK" or biome == "DESERT_DUNE" or biome == "VOLCANIC_CRAG") { 120 }
+    else { 100 }
+  };
+
+  func calcWeightInternal(p : Principal, stakeAmount : Nat) : Nat {
+    if (stakeAmount == 0) { return 0 };
+    let lands = switch (landRegistry.get(p)) {
+      case (?l) { l };
+      case null { return stakeAmount };
+    };
+    var maxBiomeBP : Nat = 100;
+    var maxMods : Nat = 0;
+    for (land in lands.vals()) {
+      let bp = getBiomeMultiplierBP(land.biome);
+      if (bp > maxBiomeBP) { maxBiomeBP := bp };
+      let mods = land.attachedModifications.size();
+      if (mods > maxMods) { maxMods := mods };
+    };
+    let modBP : Nat = 100 + (maxMods * 50 / 49);
+    stakeAmount * maxBiomeBP * modBP / 10000
+  };
+
+  func calcEarnedRewards(entry : GStakeEntry, weight : Nat) : Nat {
+    let diff = if (gRewardPerToken >= entry.rewardCheckpoint) {
+      gRewardPerToken - entry.rewardCheckpoint
+    } else { 0 };
+    weight * diff / G_REWARD_PRECISION
+  };
+
+  func calcClaimableVest(p : Principal) : Nat {
+    switch (governanceVesting.get(p)) {
+      case null { 0 };
+      case (?vest) {
+        let elapsed : Int = Time.now() - vest.startTime;
+        if (elapsed <= 0) { return 0 };
+        let elapsedNat : Nat = Int.abs(elapsed);
+        let vestPeriodNat : Nat = Int.abs(G_VEST_PERIOD_NS);
+        let vested = if (elapsedNat >= vestPeriodNat) {
+          vest.amount
+        } else {
+          vest.amount * elapsedNat / vestPeriodNat
+        };
+        if (vested > vest.claimed) { vested - vest.claimed } else { 0 }
+      };
+    }
+  };
+
+  func addToVesting(p : Principal, earned : Nat) {
+    switch (governanceVesting.get(p)) {
+      case null {
+        governanceVesting.add(p, { amount = earned; startTime = Time.now(); claimed = 0 });
+      };
+      case (?prev) {
+        let elapsed : Int = Time.now() - prev.startTime;
+        if (elapsed >= G_VEST_PERIOD_NS) {
+          governanceVesting.add(p, { amount = earned; startTime = Time.now(); claimed = 0 });
+        } else {
+          governanceVesting.add(p, { prev with amount = prev.amount + earned });
+        };
+      };
+    };
+  };
+
+  // ── Staking ──
+
+  public shared ({ caller }) func gStakeTokens(amount : Nat) : async GStakeResult {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let existing = switch (governanceStakes.get(caller)) {
+      case (?e) { e };
+      case null { { amount = 0; stakedAt = Time.now(); rewardCheckpoint = gRewardPerToken } };
+    };
+    let weight = calcWeightInternal(caller, existing.amount);
+    let earned = calcEarnedRewards(existing, weight);
+    if (earned > 0) { addToVesting(caller, earned) };
+    let oldWeight = weight;
+    let newAmount = existing.amount + amount;
+    let newWeight = calcWeightInternal(caller, newAmount);
+    gTotalWeightedStake := gTotalWeightedStake + newWeight - oldWeight;
+    governanceStakes.add(caller, { amount = newAmount; stakedAt = Time.now(); rewardCheckpoint = gRewardPerToken });
+    #success({ newStake = newAmount })
+  };
+
+  public shared ({ caller }) func gUnstakeTokens(amount : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let entry = switch (governanceStakes.get(caller)) {
+      case null { Runtime.trap("No stake found") };
+      case (?e) { e };
+    };
+    if (entry.amount < amount) { Runtime.trap("Insufficient staked amount") };
+    let elapsed : Int = Time.now() - entry.stakedAt;
+    if (elapsed < G_LOCK_PERIOD_NS) { Runtime.trap("Tokens locked for 14 days") };
+    let weight = calcWeightInternal(caller, entry.amount);
+    let earned = calcEarnedRewards(entry, weight);
+    if (earned > 0) { addToVesting(caller, earned) };
+    let newAmount = entry.amount - amount;
+    let newWeight = calcWeightInternal(caller, newAmount);
+    let weightDiff = if (weight > newWeight) { weight - newWeight } else { 0 };
+    gTotalWeightedStake := if (gTotalWeightedStake >= weightDiff) { gTotalWeightedStake - weightDiff } else { 0 };
+    governanceStakes.add(caller, { amount = newAmount; stakedAt = entry.stakedAt; rewardCheckpoint = gRewardPerToken });
+  };
+
+  public shared ({ caller }) func gClaimVestedRewards() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    switch (governanceStakes.get(caller)) {
+      case (?entry) {
+        let weight = calcWeightInternal(caller, entry.amount);
+        let earned = calcEarnedRewards(entry, weight);
+        if (earned > 0) {
+          addToVesting(caller, earned);
+          governanceStakes.add(caller, { entry with rewardCheckpoint = gRewardPerToken });
+        };
+      };
+      case null {};
+    };
+    let claimable = calcClaimableVest(caller);
+    if (claimable == 0) { return 0 };
+    switch (governanceVesting.get(caller)) {
+      case null { 0 };
+      case (?vest) {
+        governanceVesting.add(caller, { vest with claimed = vest.claimed + claimable });
+        claimable
+      };
+    }
+  };
+
+  public query ({ caller }) func gGetMyStakeInfo() : async GStakeInfo {
+    let entry = switch (governanceStakes.get(caller)) {
+      case null {
+        return { stake = 0; lockEndsAt = 0; weight = 0; unclaimedRewards = 0; claimableVest = 0; pendingVest = 0 };
+      };
+      case (?e) { e };
+    };
+    let weight = calcWeightInternal(caller, entry.amount);
+    let earned = calcEarnedRewards(entry, weight);
+    let claimable = calcClaimableVest(caller);
+    let pendingVest = switch (governanceVesting.get(caller)) {
+      case null { 0 };
+      case (?v) { if (v.amount > v.claimed) { v.amount - v.claimed } else { 0 } };
+    };
+    {
+      stake = entry.amount;
+      lockEndsAt = entry.stakedAt + G_LOCK_PERIOD_NS;
+      weight;
+      unclaimedRewards = earned;
+      claimableVest = claimable;
+      pendingVest;
+    }
+  };
+
+  public query func gGetStakedBalance(p : Principal) : async Nat {
+    switch (governanceStakes.get(p)) {
+      case null { 0 };
+      case (?e) { e.amount };
+    }
+  };
+
+  public query func gGetTotalWeightedStake() : async Nat { gTotalWeightedStake };
+
+  // ── Income Distribution ──
+
+  public shared ({ caller }) func gReceiveIncome(amount : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can distribute income");
+    };
+    let stakersShare = amount * 40 / 100;
+    let treasuryShare = amount * 25 / 100;
+    let developerShare = amount * 15 / 100;
+    // 20% is burned (not recorded)
+    gTreasuryBalance += treasuryShare;
+    gDeveloperFund += developerShare;
+    if (gTotalWeightedStake > 0 and stakersShare > 0) {
+      gRewardPerToken += stakersShare * G_REWARD_PRECISION / gTotalWeightedStake;
+    };
+  };
+
+  public query func gGetTreasuryBalance() : async Nat { gTreasuryBalance };
+  public query func gGetDeveloperFund() : async Nat { gDeveloperFund };
+
+  // ── Proposals ──
+
+  public shared ({ caller }) func gCreateProposal(title : Text, description : Text, category : Text) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let entry = switch (governanceStakes.get(caller)) {
+      case null { Runtime.trap("Must have staked tokens to create proposals") };
+      case (?e) { e };
+    };
+    if (entry.amount == 0) { Runtime.trap("Must have staked tokens to create proposals") };
+    let validCategory = category == "treasury" or category == "partnership" or category == "roadmap";
+    if (not validCategory) {
+      Runtime.trap("Invalid category: must be treasury, partnership, or roadmap");
+    };
+    let id = gNextProposalId;
+    gNextProposalId += 1;
+    let newProposal : GProposal = {
+      id; title; description; category;
+      proposer = caller;
+      createdAt = Time.now();
+      votesYes = 0; votesNo = 0; isActive = true;
+    };
+    governanceProposals := ([governanceProposals, [newProposal]]).flatten();
+    id
+  };
+
+  public shared ({ caller }) func gVote(proposalId : Nat, choice : Bool) : async GVoteResult {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let entry = switch (governanceStakes.get(caller)) {
+      case null { return #notStaker };
+      case (?e) { if (e.amount == 0) { return #notStaker }; e };
+    };
+    let weight = calcWeightInternal(caller, entry.amount);
+    let myVotes = switch (governanceVotes.get(caller)) {
+      case (?v) { v };
+      case null { [] };
+    };
+    for (vote in myVotes.vals()) {
+      if (vote.proposalId == proposalId) { return #alreadyVoted };
+    };
+    var proposalExists = false;
+    var proposalActive = false;
+    for (p in governanceProposals.vals()) {
+      if (p.id == proposalId) {
+        proposalExists := true;
+        proposalActive := p.isActive;
+      };
+    };
+    if (not proposalExists) { return #proposalNotFound };
+    if (not proposalActive) { return #proposalNotActive };
+    var newProposals : [GProposal] = [];
+    for (p in governanceProposals.vals()) {
+      if (p.id == proposalId) {
+        let updated = if (choice) { { p with votesYes = p.votesYes + weight } }
+                      else { { p with votesNo = p.votesNo + weight } };
+        newProposals := ([newProposals, [updated]]).flatten();
+      } else {
+        newProposals := ([newProposals, [p]]).flatten();
+      };
+    };
+    governanceProposals := newProposals;
+    governanceVotes.add(caller, ([myVotes, [{ proposalId; choice; weight }]]).flatten());
+    #success({ weight })
+  };
+
+  public query func gGetAllProposals() : async [GProposal] {
+    governanceProposals
+  };
+
+  public query func gGetActiveProposals() : async [GProposal] {
+    governanceProposals.filter(func(p : GProposal) : Bool { p.isActive })
+  };
+
+  public query ({ caller }) func gGetMyVotes() : async [GVoteRecord] {
+    switch (governanceVotes.get(caller)) {
+      case (?v) { v };
+      case null { [] };
+    }
+  };
+
+  // ── Leaderboard ──
+
+  public query func gGetLeaderboard(limit : Nat) : async [GStakerLeaderboardEntry] {
+    var entries : [GStakerLeaderboardEntry] = [];
+    for ((p, entry) in governanceStakes.entries()) {
+      if (entry.amount > 0) {
+        let lands = switch (landRegistry.get(p)) {
+          case (?l) { l };
+          case null { [] };
+        };
+        var maxBiomeBP : Nat = 100;
+        var topBiome : Text = "ISLAND_ARCHIPELAGO";
+        var maxMods : Nat = 0;
+        for (land in lands.vals()) {
+          let bp = getBiomeMultiplierBP(land.biome);
+          if (bp > maxBiomeBP) { maxBiomeBP := bp; topBiome := land.biome };
+          let mods = land.attachedModifications.size();
+          if (mods > maxMods) { maxMods := mods };
+        };
+        let weight = calcWeightInternal(p, entry.amount);
+        let unclaimedRewards = calcEarnedRewards(entry, weight);
+        entries := ([entries, [{ principal = p; stake = entry.amount; weight; topBiome; maxMods; unclaimedRewards }]]).flatten();
+      };
+    };
+    let sorted = entries.sort(func(a : GStakerLeaderboardEntry, b : GStakerLeaderboardEntry) : { #less; #equal; #greater } {
+      if (a.weight > b.weight) { #less }
+      else if (a.weight < b.weight) { #greater }
+      else { #equal }
+    });
+    let size = if (limit < sorted.size()) { limit } else { sorted.size() };
+    Array.tabulate(size, func(i : Nat) : GStakerLeaderboardEntry { sorted[i] })
+  };
+
+  public query ({ caller }) func gCalcWeight(p : Principal) : async Nat {
+    switch (governanceStakes.get(p)) {
+      case null { 0 };
+      case (?e) { calcWeightInternal(p, e.amount) };
+    }
+  };
+
+  // ── Admin ──
+
+  public shared ({ caller }) func gAdminCloseProposal(proposalId : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can close proposals");
+    };
+    var newProposals : [GProposal] = [];
+    for (p in governanceProposals.vals()) {
+      if (p.id == proposalId) {
+        newProposals := ([newProposals, [{ p with isActive = false }]]).flatten();
+      } else {
+        newProposals := ([newProposals, [p]]).flatten();
+      };
+    };
+    governanceProposals := newProposals;
+  };
+
+  public shared ({ caller }) func gAdminWithdrawTreasury(amount : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can withdraw treasury");
+    };
+    if (amount > gTreasuryBalance) { Runtime.trap("Insufficient treasury balance") };
+    gTreasuryBalance := gTreasuryBalance - amount;
   };
 
 };

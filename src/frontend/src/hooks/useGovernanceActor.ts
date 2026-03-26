@@ -4,20 +4,10 @@ import type { governanceBackendInterface } from "../governance-backend";
 import { idlFactory } from "../governance-backend.idl";
 import { useInternetIdentity } from "./useInternetIdentity";
 
-const MAX_RETRIES = 25;
-const RETRY_DELAYS = [
-  1000, 1000, 2000, 2000, 3000, 3000, 5000, 5000, 7000, 7000, 10000, 10000,
-  15000, 15000, 20000, 20000, 25000, 25000, 30000, 30000, 35000, 35000, 40000,
-  40000, 45000,
-];
-const ACTOR_TIMEOUT = 120000; // 120 seconds (maximum recommended)
-
-// Multiple IC gateways for automatic failover
-// PRIMARY: ic0.app (RESTORED AS PRIMARY - DFINITY official gateway)
 const IC_GATEWAYS = [
-  "https://ic0.app", // Primary: DFINITY official gateway (RESTORED)
-  "https://boundary.ic0.app", // Secondary: Boundary node gateway
-  "https://icp-api.io", // Tertiary: API-focused gateway
+  "https://ic0.app",
+  "https://boundary.ic0.app",
+  "https://icp-api.io",
 ] as const;
 
 const LOCAL_HOST = "http://localhost:4943";
@@ -29,22 +19,16 @@ async function selectOptimalGateway(
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-
       await fetch(`${gateway}/api/v2/status`, {
         method: "GET",
         signal: controller.signal,
       });
-
       clearTimeout(timeoutId);
-      console.log(`[Governance] ✓ Gateway selected: ${gateway}`);
       return gateway;
     } catch (_error) {
-      console.warn(
-        `[Governance] Gateway ${gateway} unavailable, trying next...`,
-      );
+      // Try next gateway
     }
   }
-
   return gateways[0];
 }
 
@@ -56,111 +40,58 @@ export function useGovernanceActor() {
   const isInitializingRef = useRef(false);
 
   useEffect(() => {
-    if (isInitializingRef.current || isInitializing) {
-      return;
-    }
+    if (isInitializingRef.current || isInitializing) return;
 
-    const initActorWithRetry = async () => {
+    const initActor = async () => {
       isInitializingRef.current = true;
       setIsFetching(true);
       setError(null);
 
-      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-          console.log(
-            `[Governance Actor] Initialization attempt ${attempt + 1}/${MAX_RETRIES} with 120s timeout`,
-          );
+      try {
+        // Governance is embedded in the main backend canister
+        const canisterId =
+          import.meta.env.CANISTER_ID_BACKEND ||
+          import.meta.env.VITE_BACKEND_CANISTER_ID ||
+          import.meta.env.VITE_GOVERNANCE_CANISTER_ID ||
+          "bkyz2-fmaaa-aaaaa-qaaaq-cai";
 
-          const governanceCanisterId =
-            import.meta.env.VITE_GOVERNANCE_CANISTER_ID ||
-            import.meta.env.CANISTER_ID_GOVERNANCE_CANISTER ||
-            "bkyz2-fmaaa-aaaaa-qaaaq-cai";
+        if (!canisterId) throw new Error("Backend canister ID not configured");
 
-          if (!governanceCanisterId) {
-            throw new Error("Governance Canister ID not configured");
-          }
+        const network = import.meta.env.VITE_DFX_NETWORK || "ic";
+        const host =
+          network === "local"
+            ? LOCAL_HOST
+            : await selectOptimalGateway(IC_GATEWAYS);
 
-          const network = import.meta.env.VITE_DFX_NETWORK || "ic";
-          const host =
-            network === "local"
-              ? LOCAL_HOST
-              : await selectOptimalGateway(IC_GATEWAYS);
+        const agent = await HttpAgent.create({
+          host,
+          identity: identity || undefined,
+        });
 
-          console.log("[Governance Actor] Config:", {
-            canisterId: governanceCanisterId,
-            network,
-            host,
-          });
-
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(
-              () => reject(new Error("Governance actor timeout (120s)")),
-              ACTOR_TIMEOUT,
-            );
-          });
-
-          const actorPromise = (async () => {
-            const agent = await HttpAgent.create({
-              host,
-              identity: identity || undefined,
-            });
-
-            if (network === "local") {
-              try {
-                await agent.fetchRootKey();
-              } catch (err) {
-                console.warn("[Governance Actor] Root key fetch failed:", err);
-              }
-            }
-
-            return Actor.createActor(idlFactory, {
-              agent,
-              canisterId: governanceCanisterId,
-            }) as governanceBackendInterface;
-          })();
-
-          const newActor = await Promise.race([actorPromise, timeoutPromise]);
-
-          console.log("[Governance Actor] ✓ Actor initialized successfully");
-          setActor(newActor);
-          setError(null);
-          isInitializingRef.current = false;
-          setIsFetching(false);
-          return;
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          console.error(
-            `[Governance Actor] Attempt ${attempt + 1} failed:`,
-            errorMessage,
-          );
-
-          if (errorMessage.includes("not configured")) {
-            setError(errorMessage);
-            setActor(null);
-            isInitializingRef.current = false;
-            setIsFetching(false);
-            return;
-          }
-
-          if (attempt === MAX_RETRIES - 1) {
-            console.error("[Governance Actor] All retry attempts exhausted");
-            setError(
-              `Failed after ${MAX_RETRIES} attempts with 120s timeout and gateway failover: ${errorMessage}`,
-            );
-            setActor(null);
-            isInitializingRef.current = false;
-            setIsFetching(false);
-            return;
-          }
-
-          const delay = RETRY_DELAYS[attempt];
-          console.log(`[Governance Actor] Retrying in ${delay}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        if (network === "local") {
+          try {
+            await agent.fetchRootKey();
+          } catch (_) {}
         }
+
+        const newActor = Actor.createActor(idlFactory, {
+          agent,
+          canisterId,
+        }) as governanceBackendInterface;
+
+        setActor(newActor);
+        setError(null);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        setActor(null);
+      } finally {
+        isInitializingRef.current = false;
+        setIsFetching(false);
       }
     };
 
-    initActorWithRetry();
+    initActor();
   }, [identity, isInitializing]);
 
   return {

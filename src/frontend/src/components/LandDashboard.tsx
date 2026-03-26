@@ -21,7 +21,10 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PLANNED_MODIFIER_CATALOG } from "../data/modifierCatalog";
+import {
+  KEEPER_CATALOG,
+  PLANNED_MODIFIER_CATALOG,
+} from "../data/modifierCatalog";
 
 interface LandDashboardProps {
   selectedLandIndex: number;
@@ -34,6 +37,7 @@ const RARITY_NAMES: Record<string, string> = {
   "2": "Rare",
   "3": "Legendary",
   "4": "Mythic",
+  "5": "Keeper",
 };
 
 const RARITY_COLORS: Record<string, string> = {
@@ -41,12 +45,21 @@ const RARITY_COLORS: Record<string, string> = {
   "2": "text-blue-400",
   "3": "text-purple-400",
   "4": "text-yellow-400",
+  "5": "text-fuchsia-400",
 };
 
 function getCatalogEntry(modifierType: string) {
-  return PLANNED_MODIFIER_CATALOG.find(
+  const found = PLANNED_MODIFIER_CATALOG.find(
     (c) => c.name.toLowerCase() === modifierType.toLowerCase(),
   );
+  if (found) return found;
+  // Also check keeper catalog
+  const keeper = KEEPER_CATALOG.find(
+    (k) => k.name.toLowerCase() === modifierType.toLowerCase(),
+  );
+  if (keeper)
+    return { ...keeper, rarity_tier: 5 as const, asset_url: keeper.asset_url };
+  return undefined;
 }
 
 export default function LandDashboard({
@@ -502,7 +515,17 @@ export default function LandDashboard({
                           alt={cat.name}
                           className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
                           style={{
-                            filter: `drop-shadow(0 0 6px ${rarityTier === 4 ? "rgba(250,204,21,0.6)" : rarityTier === 3 ? "rgba(168,85,247,0.5)" : rarityTier === 2 ? "rgba(96,165,250,0.4)" : "rgba(156,163,175,0.3)"})`,
+                            filter: `drop-shadow(0 0 6px ${
+                              rarityTier === 5
+                                ? "rgba(204,68,255,0.7)"
+                                : rarityTier === 4
+                                  ? "rgba(250,204,21,0.6)"
+                                  : rarityTier === 3
+                                    ? "rgba(168,85,247,0.5)"
+                                    : rarityTier === 2
+                                      ? "rgba(96,165,250,0.4)"
+                                      : "rgba(156,163,175,0.3)"
+                            })`,
                           }}
                         />
                       ) : (

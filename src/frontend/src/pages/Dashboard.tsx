@@ -19,6 +19,7 @@ import LandSelector from "../components/LandSelector";
 import Leaderboard from "../components/Leaderboard";
 import MapView from "../components/MapView";
 import Marketplace from "../components/Marketplace";
+import Guide from "../components/guide/Guide";
 import { useActor } from "../hooks/useActor";
 import Collection from "./Collection";
 
@@ -69,7 +70,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (lands && lands.length > 0) {
       const currentLand = lands[selectedLandIndex];
-      console.log("[Dashboard] \uD83C\uDF0D Current Land Data:", {
+      console.log("[Dashboard] 🌍 Current Land Data:", {
         index: selectedLandIndex,
         biome: currentLand.biome,
         landId: currentLand.landId,
@@ -198,7 +199,7 @@ export default function Dashboard() {
             {activeTab === "leaderboard" && <Leaderboard />}
             {activeTab === "marketplace" && <Marketplace />}
             {activeTab === "governance" && <Governance />}
-            {activeTab === "guide" && <ComingSoon />}
+            {activeTab === "guide" && <Guide />}
           </div>
         </div>
       </div>

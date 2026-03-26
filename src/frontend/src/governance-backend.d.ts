@@ -1,10 +1,17 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import type { Time } from "./backend";
 
-export interface Proposal {
+export interface GStakeEntry {
+  amount: bigint;
+  stakedAt: Time;
+  rewardCheckpoint: bigint;
+}
+
+export interface GProposal {
   id: bigint;
   title: string;
   description: string;
+  category: string;
   proposer: Principal;
   createdAt: Time;
   votesYes: bigint;
@@ -12,14 +19,37 @@ export interface Proposal {
   isActive: boolean;
 }
 
-export interface Vote {
-  voter: Principal;
+export interface GVoteRecord {
   proposalId: bigint;
   choice: boolean;
   weight: bigint;
 }
 
-export type StakeResult =
+export interface GVestingEntry {
+  amount: bigint;
+  startTime: Time;
+  claimed: bigint;
+}
+
+export interface GStakerLeaderboardEntry {
+  principal: Principal;
+  stake: bigint;
+  weight: bigint;
+  topBiome: string;
+  maxMods: bigint;
+  unclaimedRewards: bigint;
+}
+
+export interface GStakeInfo {
+  stake: bigint;
+  lockEndsAt: Time;
+  weight: bigint;
+  unclaimedRewards: bigint;
+  claimableVest: bigint;
+  pendingVest: bigint;
+}
+
+export type GStakeResult =
   | { __kind__: "success"; success: { newStake: bigint } }
   | {
       __kind__: "insufficientTokens";
@@ -27,7 +57,7 @@ export type StakeResult =
     }
   | { __kind__: "transferFailed"; transferFailed: string };
 
-export type VoteResult =
+export type GVoteResult =
   | { __kind__: "success"; success: { weight: bigint } }
   | { __kind__: "proposalNotFound"; proposalNotFound: null }
   | { __kind__: "proposalNotActive"; proposalNotActive: null }
@@ -35,14 +65,39 @@ export type VoteResult =
   | { __kind__: "notStaker"; notStaker: null };
 
 export interface governanceBackendInterface {
-  initializeAccessControl(): Promise<void>;
-  stakeTokens(amount: bigint): Promise<StakeResult>;
-  unstakeTokens(amount: bigint): Promise<void>;
-  getStakedBalance(): Promise<bigint>;
-  createProposal(title: string, description: string): Promise<bigint>;
-  vote(proposalId: bigint, choice: boolean): Promise<VoteResult>;
-  getProposal(proposalId: bigint): Promise<Proposal | null>;
-  getAllActiveProposals(): Promise<Array<Proposal>>;
-  getAllProposals(): Promise<Array<Proposal>>;
-  getMyVotes(): Promise<Array<Vote>>;
+  // Staking
+  gStakeTokens(amount: bigint): Promise<GStakeResult>;
+  gUnstakeTokens(amount: bigint): Promise<void>;
+  gClaimVestedRewards(): Promise<bigint>;
+  gGetMyStakeInfo(): Promise<GStakeInfo>;
+  gGetStakedBalance(p: Principal): Promise<bigint>;
+  gGetTotalWeightedStake(): Promise<bigint>;
+  // Income
+  gReceiveIncome(amount: bigint): Promise<void>;
+  gGetTreasuryBalance(): Promise<bigint>;
+  gGetDeveloperFund(): Promise<bigint>;
+  // Proposals
+  gCreateProposal(
+    title: string,
+    description: string,
+    category: string,
+  ): Promise<bigint>;
+  gVote(proposalId: bigint, choice: boolean): Promise<GVoteResult>;
+  gGetAllProposals(): Promise<Array<GProposal>>;
+  gGetActiveProposals(): Promise<Array<GProposal>>;
+  gGetMyVotes(): Promise<Array<GVoteRecord>>;
+  // Leaderboard
+  gGetLeaderboard(limit: bigint): Promise<Array<GStakerLeaderboardEntry>>;
+  gCalcWeight(p: Principal): Promise<bigint>;
+  // Admin
+  gAdminCloseProposal(proposalId: bigint): Promise<void>;
+  gAdminWithdrawTreasury(amount: bigint): Promise<void>;
 }
+
+// Re-export old names for backward compatibility
+export type {
+  GProposal as Proposal,
+  GVoteRecord as Vote,
+  GStakeResult as StakeResult,
+  GVoteResult as VoteResult,
+};
