@@ -1,4 +1,6 @@
-import React, { useRef } from "react";
+import { X } from "lucide-react";
+import React, { useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { TechnicalDetails } from "./TechnicalDetails";
 
 // ─── Constants ────────────────────────────────────────────────────────────────────────────────────
@@ -246,6 +248,11 @@ function SectionTitle({
 
 export default function Guide() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [guideModal, setGuideModal] = useState<{
+    img: string;
+    label: string;
+    color: string;
+  } | null>(null);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -318,22 +325,6 @@ export default function Guide() {
         {/* ── 1. LAND NFT ────────────────────────────────────────── */}
         <SectionCard id="guide-land" accent="#cc44ff">
           <div className="relative px-5 py-5">
-            <img
-              src="/assets/uploads/map_mythic.webp"
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-y-0 right-0 h-full w-1/2"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-              style={{
-                objectFit: "cover",
-                objectPosition: "right center",
-                opacity: 0.18,
-                pointerEvents: "none",
-                userSelect: "none",
-              }}
-            />
             {/* Full-width content — equal padding both sides */}
             <div className="relative z-10">
               <SectionTitle
@@ -466,7 +457,7 @@ export default function Guide() {
                 >
                   THE SEVEN LANDS
                 </p>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {[
                     {
                       biome: "FOREST_VALLEY",
@@ -476,7 +467,7 @@ export default function Guide() {
                     },
                     {
                       biome: "ISLAND_ARCHIPELAGO",
-                      label: "Island",
+                      label: "Island Archipelago",
                       color: "#00ffcc",
                       img: "/assets/uploads/land_island_archipelago.webp",
                     },
@@ -494,7 +485,7 @@ export default function Guide() {
                     },
                     {
                       biome: "VOLCANIC_CRAG",
-                      label: "Volcanic",
+                      label: "Volcanic Crag",
                       color: "#f87171",
                       img: "/assets/uploads/land_volcanic_crag.webp",
                     },
@@ -506,18 +497,34 @@ export default function Guide() {
                     },
                     {
                       biome: "MYTHIC_AETHER",
-                      label: "M. Aether",
+                      label: "Mythic Aether",
                       color: "#a855f7",
                       img: "/assets/uploads/land_mythic_aether.webp",
                     },
                   ].map((b) => (
-                    <div
+                    <button
+                      type="button"
                       key={b.biome}
-                      className="flex flex-col items-center gap-1 rounded-xl p-2"
+                      onClick={() =>
+                        setGuideModal({
+                          img: b.img,
+                          label: b.label,
+                          color: b.color,
+                        })
+                      }
+                      className="flex flex-col items-center gap-1 rounded-xl p-2 text-left"
                       style={{
                         background: `${b.color}0a`,
                         border: `1px solid ${b.color}40`,
                         boxShadow: `0 0 8px ${b.color}15`,
+                        cursor: "pointer",
+                        transition: "transform 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
                       <div
@@ -546,7 +553,7 @@ export default function Guide() {
                       >
                         {b.label}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1161,13 +1168,29 @@ export default function Guide() {
                   style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
                 >
                   {MAP_REGIONS.map((r) => (
-                    <div
+                    <button
+                      type="button"
                       key={r.name}
-                      className="flex flex-col items-center gap-1.5 rounded-xl p-2"
+                      onClick={() =>
+                        setGuideModal({
+                          img: r.img,
+                          label: r.name,
+                          color: r.color,
+                        })
+                      }
+                      className="flex flex-col items-center gap-1.5 rounded-xl p-2 text-left"
                       style={{
                         background: `${r.color}0a`,
                         border: `1px solid ${r.color}35`,
                         overflow: "hidden",
+                        cursor: "pointer",
+                        transition: "transform 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
                       <div
@@ -1209,7 +1232,7 @@ export default function Guide() {
                           {r.note}
                         </span>
                       )}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1289,22 +1312,6 @@ export default function Guide() {
         {/* ── 7. GOVERNANCE ────────────────────────────────────────── */}
         <SectionCard id="guide-governance" accent="#a855f7">
           <div className="relative px-5 py-5">
-            <img
-              src="/assets/uploads/map_volcanic_crag.webp"
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-y-0 right-0 h-full w-1/3"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-              style={{
-                objectFit: "cover",
-                objectPosition: "right center",
-                opacity: 0.18,
-                pointerEvents: "none",
-                userSelect: "none",
-              }}
-            />
             <div className="relative z-10">
               <SectionTitle
                 title="GOVERNANCE"
@@ -1448,6 +1455,95 @@ export default function Guide() {
         {/* ── 8. TECHNICAL DETAILS ─────────────────────────────────────── */}
         <TechnicalDetails />
       </div>
+
+      {/* Guide photo modal */}
+      {guideModal &&
+        ReactDOM.createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.85)",
+              backdropFilter: "blur(8px)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setGuideModal(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setGuideModal(null);
+            }}
+          >
+            <style>
+              {
+                "@keyframes fadeInScale{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}"
+              }
+            </style>
+            <div
+              style={{
+                position: "relative",
+                width: "min(90vw, 480px)",
+                background: "rgba(10,10,20,0.92)",
+                backdropFilter: "blur(16px)",
+                border: `1px solid ${guideModal.color}60`,
+                borderRadius: 16,
+                padding: 16,
+                boxShadow: `0 0 40px ${guideModal.color}40`,
+                animation: "fadeInScale 0.2s ease-out",
+                display: "flex",
+                flexDirection: "column" as const,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "rgba(255,255,255,0.6)",
+                  padding: 4,
+                }}
+                onClick={() => setGuideModal(null)}
+              >
+                <X size={20} />
+              </button>
+              <img
+                src={guideModal.img}
+                alt={guideModal.label}
+                style={{
+                  width: "min(80vw, 380px)",
+                  height: "min(80vw, 380px)",
+                  objectFit: "contain",
+                  borderRadius: 8,
+                  filter: `drop-shadow(0 0 24px ${guideModal.color}99)`,
+                  animation: "fadeInScale 0.3s ease-out",
+                }}
+              />
+              <p
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: guideModal.color,
+                  textShadow: `0 0 12px ${guideModal.color}80`,
+                  textAlign: "center",
+                }}
+              >
+                {guideModal.label}
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

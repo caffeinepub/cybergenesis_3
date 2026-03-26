@@ -81,7 +81,7 @@ export default function Collection() {
                 className="glassmorphism p-4 rounded-lg text-center"
                 style={{ border: `1px solid ${s.borderColor}` }}
               >
-                <p className="font-jetbrains text-xs text-muted-foreground uppercase mb-1">
+                <p className="font-jetbrains text-[10px] text-muted-foreground uppercase mb-1 leading-tight break-words">
                   {s.label}
                 </p>
                 <p

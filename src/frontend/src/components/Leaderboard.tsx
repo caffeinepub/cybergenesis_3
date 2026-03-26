@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTokenBalance } from "@/lib/tokenUtils";
 import { Loader2, Trophy } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetTopLands } from "../hooks/useQueries";
 import { useTokenActor } from "../hooks/useTokenActor";
@@ -63,7 +64,7 @@ function InspectorModal({
     color: getSlotColor(i),
   }));
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
@@ -219,7 +220,8 @@ function InspectorModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
