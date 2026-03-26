@@ -18,7 +18,7 @@ function CyberLoader() {
         background: "#000",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         fontFamily: "'Orbitron', sans-serif",
         overflow: "hidden",
@@ -97,8 +97,17 @@ function CyberLoader() {
           .metaverse-bottom { font-size: clamp(1rem, 5vw, 1.6rem);   letter-spacing: 2px; }
         }
       `}</style>
-      {/* Spinner text — positioned relative, centered over image */}
-      <div style={{ position: "relative", textAlign: "center", zIndex: 1 }}>
+      {/* Spinner text — fixed at bottom so it doesn't cover the logo */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10%",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          zIndex: 1,
+        }}
+      >
         <span className="loading-top">LOADING</span>
         <span className="metaverse-bottom">CYBERLAND METAVERSE</span>
       </div>

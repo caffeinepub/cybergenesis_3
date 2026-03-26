@@ -305,23 +305,32 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     document.head.appendChild(perfStyle);
 
     let zoomTarget = map.getZoom();
-    let wheelTimer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+    let pendingLatlng: ReturnType<typeof map.containerPointToLatLng> | null =
+      null;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta = e.deltaY < 0 ? 0.35 : -0.35;
+      const delta = e.deltaY < 0 ? 0.3 : -0.3;
       zoomTarget = Math.max(
         map.getMinZoom(),
         Math.min(map.getMaxZoom(), zoomTarget + delta),
       );
-      if (wheelTimer) clearTimeout(wheelTimer);
-      wheelTimer = setTimeout(() => {
-        const containerPoint = L.point(e.clientX, e.clientY);
-        const latlng = map.containerPointToLatLng(containerPoint);
-        map.setZoomAround(latlng, zoomTarget, {
-          animate: true,
-          duration: 0.25,
-        });
-      }, 35);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const containerPoint = L.point(
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+      );
+      pendingLatlng = map.containerPointToLatLng(containerPoint);
+      if (rafId !== null) return; // already scheduled
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (pendingLatlng) {
+          map.setZoomAround(pendingLatlng, zoomTarget, {
+            animate: true,
+            duration: 0.18,
+          });
+        }
+      });
     };
     mapContainerRef.current?.addEventListener("wheel", onWheel, {
       passive: false,
@@ -331,7 +340,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     return () => {
       window.removeEventListener("resize", updateMinZoom);
       mapContainerRef.current?.removeEventListener("wheel", onWheel);
-      if (wheelTimer) clearTimeout(wheelTimer);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -515,6 +524,9 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     });
     inspectorOpenRef.current = true;
     setInspectorOpen(true);
+    // Auto-close popup so it doesn't cover the inspector
+    setPopup(null);
+    setPopupPx(null);
   }, [popup]);
 
   const handleCloseInspector = useCallback(() => {

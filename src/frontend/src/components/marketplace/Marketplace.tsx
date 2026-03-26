@@ -290,69 +290,92 @@ export default function Marketplace() {
       />
 
       {/* ─── HEADER ROW ─── */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
-        {/* Filter button */}
-        <button
-          type="button"
-          onClick={() => setFilterDrawerOpen(true)}
-          className="flex items-center justify-center w-10 h-10 rounded-full transition-all"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(160,60,255,0.45)",
-            boxShadow: filterDrawerOpen
-              ? "0 0 14px rgba(160,60,255,0.5)"
-              : "0 0 6px rgba(160,60,255,0.2)",
-          }}
-          data-ocid="marketplace.filter.button"
-        >
-          <Filter size={16} style={{ color: "#a040ff" }} />
-        </button>
+      <div className="mb-4">
+        {/* Row 1: Filter + Tabs + Sell — all in one line */}
+        <div className="flex items-center gap-2 mb-2">
+          {/* Filter button */}
+          <button
+            type="button"
+            onClick={() => setFilterDrawerOpen(true)}
+            className="flex items-center justify-center w-10 h-10 rounded-full transition-all flex-shrink-0"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(160,60,255,0.45)",
+              boxShadow: filterDrawerOpen
+                ? "0 0 14px rgba(160,60,255,0.5)"
+                : "0 0 6px rgba(160,60,255,0.2)",
+            }}
+            data-ocid="marketplace.filter.button"
+          >
+            <Filter size={16} style={{ color: "#a040ff" }} />
+          </button>
 
-        {/* LANDS / MODS toggle */}
-        {(["lands", "mods"] as const).map((tab) => {
-          const isActive = activeTab === tab;
-          const color = tab === "lands" ? "#00e5ff" : "#cc00ff";
-          return (
-            <button
-              type="button"
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setLandsPage(0);
-                setModsPage(0);
-              }}
-              className="px-5 h-10 rounded-full font-orbitron font-bold text-xs uppercase tracking-widest transition-all"
-              style={{
-                backdropFilter: "blur(12px)",
-                background: isActive ? `${color}15` : "rgba(255,255,255,0.04)",
-                border: `1px solid ${isActive ? `${color}70` : "rgba(255,255,255,0.12)"}`,
-                color: isActive ? color : "rgba(255,255,255,0.35)",
-                boxShadow: isActive
-                  ? `0 0 14px ${color}45, inset 0 0 8px ${color}10`
-                  : "none",
-                animation: isActive
-                  ? "tabActivePulse 2.5s ease-in-out infinite"
-                  : "none",
-              }}
-              data-ocid="marketplace.tab"
-            >
-              {tab === "lands" ? "LANDS" : "MODS"}
-            </button>
-          );
-        })}
+          {/* LANDS / MODS toggle */}
+          {(["lands", "mods"] as const).map((tab) => {
+            const isActive = activeTab === tab;
+            const color = tab === "lands" ? "#00e5ff" : "#cc00ff";
+            return (
+              <button
+                type="button"
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setLandsPage(0);
+                  setModsPage(0);
+                }}
+                className="px-4 h-10 rounded-full font-orbitron font-bold text-xs uppercase tracking-widest transition-all flex-shrink-0"
+                style={{
+                  backdropFilter: "blur(12px)",
+                  background: isActive
+                    ? `${color}15`
+                    : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${isActive ? `${color}70` : "rgba(255,255,255,0.12)"}`,
+                  color: isActive ? color : "rgba(255,255,255,0.35)",
+                  boxShadow: isActive
+                    ? `0 0 14px ${color}45, inset 0 0 8px ${color}10`
+                    : "none",
+                  animation: isActive
+                    ? "tabActivePulse 2.5s ease-in-out infinite"
+                    : "none",
+                }}
+                data-ocid="marketplace.tab"
+              >
+                {tab === "lands" ? "LANDS" : "MODS"}
+              </button>
+            );
+          })}
 
-        {/* Search button / input */}
-        <div className="relative">
+          {/* SELL button — stays in same row */}
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="ml-auto flex items-center gap-1 px-4 h-10 rounded-full font-orbitron font-bold text-xs uppercase tracking-widest transition-all flex-shrink-0"
+            style={{
+              backdropFilter: "blur(12px)",
+              background: "rgba(0,255,96,0.12)",
+              border: "1px solid rgba(0,255,96,0.5)",
+              color: "#00ff60",
+              boxShadow: "0 0 12px rgba(0,255,96,0.3)",
+              animation: "listBtnPulse 2.5s ease-in-out infinite",
+            }}
+            data-ocid="marketplace.open_modal_button"
+          >
+            <span style={{ fontSize: "13px" }}>+</span> SELL
+          </button>
+        </div>
+
+        {/* Row 2: Search — full width below */}
+        <div className="w-full">
           <AnimatePresence mode="wait">
             {searchOpen ? (
               <motion.div
                 key="search-open"
-                initial={{ width: 40, opacity: 0.5 }}
-                animate={{ width: 220, opacity: 1 }}
-                exit={{ width: 40, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="flex items-center overflow-hidden rounded-full h-10"
+                initial={{ opacity: 0.5, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center overflow-hidden rounded-full h-9 w-full"
                 style={{
                   background: "rgba(255,255,255,0.05)",
                   backdropFilter: "blur(12px)",
@@ -403,37 +426,24 @@ export default function Marketplace() {
                   setSearchOpen(true);
                   setTimeout(() => searchInputRef.current?.focus(), 50);
                 }}
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all"
+                className="flex items-center gap-2 h-9 px-4 rounded-full transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
+                  background: "rgba(255,255,255,0.04)",
                   backdropFilter: "blur(12px)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.4)",
+                  fontFamily: "monospace",
+                  fontSize: 11,
+                  letterSpacing: 1,
                 }}
                 data-ocid="marketplace.search_input"
               >
-                <Search size={16} className="text-white/50" />
+                <Search size={13} />
+                SEARCH
               </motion.button>
             )}
           </AnimatePresence>
         </div>
-
-        {/* SELL button */}
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="ml-auto flex items-center gap-2 px-5 h-10 rounded-full font-orbitron font-bold text-xs uppercase tracking-widest transition-all"
-          style={{
-            backdropFilter: "blur(12px)",
-            background: "rgba(0,255,96,0.12)",
-            border: "1px solid rgba(0,255,96,0.5)",
-            color: "#00ff60",
-            boxShadow: "0 0 12px rgba(0,255,96,0.3)",
-            animation: "listBtnPulse 2.5s ease-in-out infinite",
-          }}
-          data-ocid="marketplace.open_modal_button"
-        >
-          <span style={{ fontSize: "14px" }}>+</span> SELL
-        </button>
       </div>
 
       {/* ─── CONTENT ─── Fix 3: both tabs always in DOM, toggled via CSS */}

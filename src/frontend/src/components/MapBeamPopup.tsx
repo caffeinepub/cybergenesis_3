@@ -204,7 +204,7 @@ export function MapBeamPopup({
             }}
           />
 
-          {/* Row 4: Mods counter — clickable */}
+          {/* Row 4: Mods counter + inspect — clickable */}
           <button
             type="button"
             className="beam-popup-mods"
@@ -219,6 +219,7 @@ export function MapBeamPopup({
               margin: "0 -6px",
               transition: "background 0.2s",
               background: "transparent",
+              width: "calc(100% + 12px)",
             }}
           >
             <span
@@ -231,17 +232,34 @@ export function MapBeamPopup({
             >
               MODS INSTALLED
             </span>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color,
-                textShadow: `0 0 6px ${color}`,
-                fontFamily: "monospace",
-                borderBottom: `1px dashed ${color}60`,
-              }}
-            >
-              {popup.modCount}/49
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color,
+                  textShadow: `0 0 6px ${color}`,
+                  fontFamily: "monospace",
+                  borderBottom: `1px dashed ${color}60`,
+                }}
+              >
+                {popup.modCount}/49
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color,
+                  fontFamily: "monospace",
+                  letterSpacing: 1.5,
+                  textShadow: `0 0 6px ${color}`,
+                  textTransform: "uppercase",
+                  borderBottom: `1px dashed ${color}60`,
+                  opacity: 0.85,
+                }}
+              >
+                INSPECT
+              </span>
             </span>
           </button>
         </div>
