@@ -118,3 +118,16 @@ export function getRarityMeta(tier: number | bigint) {
   const t = Number(tier);
   return RARITY_META[t] ?? RARITY_META[1];
 }
+
+export function getBiomeLandImage(biome: string): string {
+  const map: Record<string, string> = {
+    FOREST_VALLEY: "/assets/uploads/land_forest_valley.webp",
+    ISLAND_ARCHIPELAGO: "/assets/uploads/land_island_archipelago.webp",
+    SNOW_PEAK: "/assets/uploads/land_snow_peak.webp",
+    DESERT_DUNE: "/assets/uploads/land_desert_dune.webp",
+    VOLCANIC_CRAG: "/assets/uploads/land_volcanic_crag.webp",
+    MYTHIC_VOID: "/assets/uploads/land_mythic_void.webp",
+    MYTHIC_AETHER: "/assets/uploads/land_mythic_aether.webp",
+  };
+  return map[biome] ?? "/assets/uploads/land_forest_valley.webp";
+}

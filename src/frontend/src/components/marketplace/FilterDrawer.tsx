@@ -67,7 +67,7 @@ export function FilterDrawer({
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-5 py-4 pr-12 border-b border-white/10">
             <span className="font-orbitron text-white font-bold text-sm tracking-widest">
               FILTERS
             </span>

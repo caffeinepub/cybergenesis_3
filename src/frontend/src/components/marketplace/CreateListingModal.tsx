@@ -7,6 +7,7 @@ import { ItemType } from "../../hooks/useQueries";
 import {
   BIOME_DISPLAY,
   getBiomeColor,
+  getBiomeLandImage,
   getModCatalog,
   getRarityMeta,
   parseCBRPrice,
@@ -136,7 +137,7 @@ export function CreateListingModal({
                         data-ocid="marketplace.card"
                       >
                         <img
-                          src="/assets/uploads/IMG_0577-1.webp"
+                          src={getBiomeLandImage(land.biome)}
                           alt={land.biome}
                           className="w-full h-16 object-cover"
                         />

@@ -15,6 +15,7 @@ import {
   type ListingItem,
   formatCBRDisplay,
   getBiomeColor,
+  getBiomeLandImage,
   getModCatalog,
   getRarityMeta,
 } from "./MarketplaceTypes";
@@ -116,7 +117,7 @@ export function LandCard({
           }}
         />
         <img
-          src="/assets/uploads/IMG_0577-1.webp"
+          src={getBiomeLandImage(biome)}
           alt={displayBiome}
           className="w-full h-full object-contain relative z-10"
           style={{ mixBlendMode: "lighten" }}

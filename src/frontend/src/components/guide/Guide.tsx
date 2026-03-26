@@ -129,32 +129,32 @@ const INCOME_SPLITS = [
 
 const MAP_REGIONS = [
   {
-    img: "/assets/uploads/forest_valley.WEBP",
+    img: "/assets/uploads/map_forest_valley.webp",
     name: "Forest Valley",
     color: "#4ade80",
   },
   {
-    img: "/assets/uploads/island_archipelago.WEBP",
+    img: "/assets/uploads/map_island_archipelago.webp",
     name: "Island Archipelago",
     color: "#22d3ee",
   },
   {
-    img: "/assets/uploads/snow_peak.WEBP",
+    img: "/assets/uploads/map_snow_peak.webp",
     name: "Snow Peak",
     color: "#60a5fa",
   },
   {
-    img: "/assets/uploads/desert_dune.WEBP",
+    img: "/assets/uploads/map_desert_dune.webp",
     name: "Desert Dune",
     color: "#f59e0b",
   },
   {
-    img: "/assets/uploads/volcanic_crag.WEBP",
+    img: "/assets/uploads/map_volcanic_crag.webp",
     name: "Volcanic Crag",
     color: "#f87171",
   },
   {
-    img: "/assets/uploads/mythic.WEBP",
+    img: "/assets/uploads/map_mythic.webp",
     name: "Mythic",
     color: "#cc44ff",
     note: "Void + Aether",
@@ -167,7 +167,7 @@ const NAV_ITEMS = [
   { label: "CACHES", id: "guide-caches" },
   { label: "CBR TOKEN", id: "guide-cbr" },
   { label: "MARKETPLACE", id: "guide-marketplace" },
-  { label: "MAP", id: "guide-map" },
+  { label: "CYBER MAP", id: "guide-map" },
   { label: "GOVERNANCE", id: "guide-governance" },
   { label: "TECH", id: "guide-tech" },
 ];
@@ -319,7 +319,7 @@ export default function Guide() {
         <SectionCard id="guide-land" accent="#cc44ff">
           <div className="relative px-5 py-5">
             <img
-              src="/assets/uploads/mythic.WEBP"
+              src="/assets/uploads/map_mythic.webp"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 right-0 h-full w-1/2"
@@ -457,6 +457,99 @@ export default function Guide() {
                   same.
                 </p>
               </div>
+
+              {/* Biome Land Images */}
+              <div className="mt-4">
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                  style={{ color: "#00ffcc", textShadow: "0 0 8px #00ffcc80" }}
+                >
+                  THE SEVEN LANDS
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    {
+                      biome: "FOREST_VALLEY",
+                      label: "Forest Valley",
+                      color: "#4ade80",
+                      img: "/assets/uploads/land_forest_valley.webp",
+                    },
+                    {
+                      biome: "ISLAND_ARCHIPELAGO",
+                      label: "Island",
+                      color: "#00ffcc",
+                      img: "/assets/uploads/land_island_archipelago.webp",
+                    },
+                    {
+                      biome: "SNOW_PEAK",
+                      label: "Snow Peak",
+                      color: "#60a5fa",
+                      img: "/assets/uploads/land_snow_peak.webp",
+                    },
+                    {
+                      biome: "DESERT_DUNE",
+                      label: "Desert Dune",
+                      color: "#f59e0b",
+                      img: "/assets/uploads/land_desert_dune.webp",
+                    },
+                    {
+                      biome: "VOLCANIC_CRAG",
+                      label: "Volcanic",
+                      color: "#f87171",
+                      img: "/assets/uploads/land_volcanic_crag.webp",
+                    },
+                    {
+                      biome: "MYTHIC_VOID",
+                      label: "Mythic Void",
+                      color: "#cc44ff",
+                      img: "/assets/uploads/land_mythic_void.webp",
+                    },
+                    {
+                      biome: "MYTHIC_AETHER",
+                      label: "M. Aether",
+                      color: "#a855f7",
+                      img: "/assets/uploads/land_mythic_aether.webp",
+                    },
+                  ].map((b) => (
+                    <div
+                      key={b.biome}
+                      className="flex flex-col items-center gap-1 rounded-xl p-2"
+                      style={{
+                        background: `${b.color}0a`,
+                        border: `1px solid ${b.color}40`,
+                        boxShadow: `0 0 8px ${b.color}15`,
+                      }}
+                    >
+                      <div
+                        className="rounded-lg overflow-hidden"
+                        style={{
+                          width: "52px",
+                          height: "52px",
+                          border: `1px solid ${b.color}60`,
+                          boxShadow: `0 0 10px ${b.color}40`,
+                          background: "rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        <img
+                          src={b.img}
+                          alt={b.label}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="font-jetbrains text-[8px] text-center leading-tight"
+                        style={{ color: b.color }}
+                      >
+                        {b.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </SectionCard>
@@ -465,7 +558,7 @@ export default function Guide() {
         <SectionCard id="guide-mods" accent="#ffd060">
           <div className="relative px-5 py-5">
             <img
-              src="/assets/uploads/forest_valley.WEBP"
+              src="/assets/uploads/map_forest_valley.webp"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 left-0 h-full w-1/3"
@@ -1040,7 +1133,7 @@ export default function Guide() {
             />
             <div className="relative z-10">
               <SectionTitle
-                title="WORLD MAP"
+                title="CYBER MAP"
                 subtitle="Your Coordinates. Your Beam."
                 accent="#00e5ff"
               />
@@ -1084,6 +1177,7 @@ export default function Guide() {
                           height: "50px",
                           border: `1px solid ${r.color}50`,
                           boxShadow: `0 0 8px ${r.color}30`,
+                          background: "rgba(0,0,0,0.4)",
                         }}
                       >
                         <img
@@ -1097,7 +1191,7 @@ export default function Guide() {
                           style={{
                             width: "100%",
                             height: "100%",
-                            objectFit: "cover",
+                            objectFit: "contain",
                           }}
                         />
                       </div>
@@ -1196,7 +1290,7 @@ export default function Guide() {
         <SectionCard id="guide-governance" accent="#a855f7">
           <div className="relative px-5 py-5">
             <img
-              src="/assets/uploads/volcanic_crag.WEBP"
+              src="/assets/uploads/map_volcanic_crag.webp"
               alt=""
               aria-hidden="true"
               className="absolute inset-y-0 right-0 h-full w-1/3"
