@@ -27,7 +27,7 @@ function CyberLoader() {
     >
       {/* Background image — object-fit: cover keeps center visible on all screen sizes */}
       <img
-        src="/assets/uploads/IMG_0509-2-1.webp"
+        src="/assets/uploads/img_0830-019d2ce4-e56a-7161-b78b-f37950a47713-1.webp"
         alt=""
         style={{
           position: "absolute",

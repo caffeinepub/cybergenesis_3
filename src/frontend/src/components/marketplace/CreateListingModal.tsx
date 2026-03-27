@@ -139,7 +139,8 @@ export function CreateListingModal({
                         <img
                           src={getBiomeLandImage(land.biome)}
                           alt={land.biome}
-                          className="w-full h-16 object-cover"
+                          className="w-full h-20 object-contain"
+                          style={{ background: "transparent" }}
                         />
                         <div className="p-2">
                           <p

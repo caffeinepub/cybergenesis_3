@@ -12,6 +12,7 @@ import {
   type ListingItem,
   formatCBRDisplay,
   getBiomeColor,
+  getBiomeLandImage,
   getCatalogById,
   getRarityMeta,
 } from "./MarketplaceTypes";
@@ -20,6 +21,7 @@ interface SellerModalProps {
   sellerPrincipal: string | null;
   allListings: ListingItem[];
   onClose: () => void;
+  onListingClick: (listing: ListingItem, tab: "lands" | "mods") => void;
 }
 
 function truncatePrincipalLong(p: string): string {
@@ -31,8 +33,10 @@ export function SellerModal({
   sellerPrincipal,
   allListings,
   onClose,
+  onListingClick,
 }: SellerModalProps) {
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"lands" | "mods">("lands");
 
   const sellerListings = sellerPrincipal
     ? allListings.filter((l) => l.seller.toString() === sellerPrincipal)
@@ -53,13 +57,36 @@ export function SellerModal({
     });
   };
 
+  const tabs: {
+    id: "lands" | "mods";
+    label: string;
+    count: number;
+    color: string;
+    glow: string;
+  }[] = [
+    {
+      id: "lands",
+      label: "LANDS",
+      count: landListings.length,
+      color: "#00e5ff",
+      glow: "rgba(0,229,255,0.3)",
+    },
+    {
+      id: "mods",
+      label: "MODS",
+      count: modListings.length,
+      color: "#cc00ff",
+      glow: "rgba(204,0,255,0.3)",
+    },
+  ];
+
   return (
     <Dialog
       open={!!sellerPrincipal}
       onOpenChange={(open) => !open && onClose()}
     >
       <DialogContent
-        className="max-w-md border-0 p-0 overflow-hidden"
+        className="max-w-lg border-0 p-0 overflow-hidden"
         style={{
           background: "rgba(5,0,20,0.97)",
           backdropFilter: "blur(24px)",
@@ -83,7 +110,7 @@ export function SellerModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 py-4 space-y-5">
+        <div className="px-6 py-4 space-y-4">
           {/* Principal */}
           <div
             className="flex items-center gap-3 px-4 py-3 rounded-xl"
@@ -125,113 +152,217 @@ export function SellerModal({
             </button>
           </div>
 
-          {/* Lands section */}
-          <div>
-            <h3
-              className="font-orbitron font-bold text-xs tracking-widest uppercase mb-3"
-              style={{ color: "#00e5ff" }}
-            >
-              LANDS
-              <span className="ml-2 font-jetbrains text-white/30 normal-case tracking-normal">
-                ({landListings.length})
-              </span>
-            </h3>
-            {landListings.length === 0 ? (
-              <p className="font-jetbrains text-xs text-white/25 italic">
-                No lands listed
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {landListings.map((listing) => {
-                  const biomeColor = getBiomeColor("");
-                  return (
-                    <div
-                      key={listing.listingId.toString()}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg"
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: `1px solid ${biomeColor}20`,
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{
-                            background: biomeColor,
-                            boxShadow: `0 0 6px ${biomeColor}`,
-                          }}
-                        />
-                        <span className="font-jetbrains text-xs text-white/70">
-                          Land #{listing.itemId.toString()}
-                        </span>
-                      </div>
-                      <span
-                        className="font-orbitron font-bold text-xs"
-                        style={{ color: "#FAD26A" }}
-                      >
-                        {formatCBRDisplay(listing.price)} CBR
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          {/* Tabs */}
+          <div
+            className="flex gap-1 p-1 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex-1 py-2 rounded-lg font-orbitron font-bold text-xs tracking-widest uppercase transition-all"
+                  style={{
+                    background: isActive ? `${tab.color}18` : "transparent",
+                    color: isActive ? tab.color : "rgba(255,255,255,0.35)",
+                    border: isActive
+                      ? `1px solid ${tab.color}40`
+                      : "1px solid transparent",
+                    boxShadow: isActive ? `0 0 12px ${tab.glow}` : "none",
+                    textShadow: isActive ? `0 0 8px ${tab.glow}` : "none",
+                  }}
+                  data-ocid={`seller.${tab.id}.tab`}
+                >
+                  {tab.label}
+                  <span
+                    className="ml-1.5 font-jetbrains text-[10px] normal-case tracking-normal"
+                    style={{ opacity: 0.5 }}
+                  >
+                    ({tab.count})
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Mods section */}
-          <div>
-            <h3
-              className="font-orbitron font-bold text-xs tracking-widest uppercase mb-3"
-              style={{ color: "#cc00ff" }}
-            >
-              MODS
-              <span className="ml-2 font-jetbrains text-white/30 normal-case tracking-normal">
-                ({modListings.length})
-              </span>
-            </h3>
-            {modListings.length === 0 ? (
-              <p className="font-jetbrains text-xs text-white/25 italic">
-                No mods listed
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {modListings.map((listing) => {
-                  const catalog = getCatalogById(Number(listing.itemId));
-                  const rarity = getRarityMeta(catalog?.rarity_tier ?? 1);
-                  const modName = catalog?.name ?? `MOD #${listing.itemId}`;
-                  return (
-                    <div
-                      key={listing.listingId.toString()}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg"
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: `1px solid ${rarity.color}20`,
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="font-jetbrains text-[10px] font-bold px-1.5 py-0.5 rounded"
-                          style={{
-                            background: `${rarity.glow}`,
-                            border: `1px solid ${rarity.color}40`,
-                            color: rarity.color,
+          {/* Content */}
+          <div
+            className="overflow-y-auto"
+            style={{
+              maxHeight: "288px",
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(0,255,200,0.3) transparent",
+            }}
+          >
+            {/* LANDS TAB */}
+            {activeTab === "lands" && (
+              <div>
+                {landListings.length === 0 ? (
+                  <div className="flex items-center justify-center py-10">
+                    <p className="font-jetbrains text-xs text-white/25 italic">
+                      No lands listed
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {landListings.map((listing) => {
+                      const biome = (listing as any).biome ?? "";
+                      const biomeColor = getBiomeColor(biome);
+                      const landImg = getBiomeLandImage(biome);
+                      const biomeLabel =
+                        BIOME_DISPLAY[biome] ??
+                        biome ??
+                        `Land #${listing.itemId}`;
+                      return (
+                        <button
+                          type="button"
+                          key={listing.listingId.toString()}
+                          onClick={() => {
+                            onListingClick(listing, "lands");
+                            onClose();
                           }}
+                          className="flex flex-col rounded-xl overflow-hidden transition-all hover:scale-[1.03] text-left"
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            border: `1px solid ${biomeColor}35`,
+                            boxShadow: `0 0 10px ${biomeColor}10`,
+                          }}
+                          data-ocid="seller.lands.item"
                         >
-                          {rarity.label}
-                        </span>
-                        <span className="font-jetbrains text-xs text-white/70">
-                          {modName}
-                        </span>
-                      </div>
-                      <span
-                        className="font-orbitron font-bold text-xs"
-                        style={{ color: "#FAD26A" }}
-                      >
-                        {formatCBRDisplay(listing.price)} CBR
-                      </span>
-                    </div>
-                  );
-                })}
+                          <div
+                            className="w-full flex items-center justify-center"
+                            style={{
+                              height: "80px",
+                              background: "rgba(0,0,0,0.3)",
+                            }}
+                          >
+                            <img
+                              src={landImg}
+                              alt={biomeLabel}
+                              className="w-full h-full object-contain"
+                              style={{ background: "transparent" }}
+                            />
+                          </div>
+                          <div className="px-3 py-2">
+                            <p
+                              className="font-orbitron font-bold text-[10px] uppercase tracking-wider truncate"
+                              style={{
+                                color: biomeColor,
+                                textShadow: `0 0 6px ${biomeColor}60`,
+                              }}
+                            >
+                              {biomeLabel}
+                            </p>
+                            <p
+                              className="font-jetbrains text-xs font-bold mt-0.5"
+                              style={{ color: "#FAD26A" }}
+                            >
+                              {formatCBRDisplay(listing.price)} CBR
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODS TAB */}
+            {activeTab === "mods" && (
+              <div>
+                {modListings.length === 0 ? (
+                  <div className="flex items-center justify-center py-10">
+                    <p className="font-jetbrains text-xs text-white/25 italic">
+                      No mods listed
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {modListings.map((listing) => {
+                      const catalog = getCatalogById(Number(listing.itemId));
+                      const rarity = getRarityMeta(catalog?.rarity_tier ?? 1);
+                      const modName = catalog?.name ?? `MOD #${listing.itemId}`;
+                      const modImg = catalog?.asset_url;
+                      return (
+                        <button
+                          type="button"
+                          key={listing.listingId.toString()}
+                          onClick={() => {
+                            onListingClick(listing, "mods");
+                            onClose();
+                          }}
+                          className="flex flex-col rounded-xl overflow-hidden transition-all hover:scale-[1.03] text-left"
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            border: `1px solid ${rarity.color}35`,
+                            boxShadow: `0 0 8px ${rarity.color}10`,
+                          }}
+                          data-ocid="seller.mods.item"
+                        >
+                          <div
+                            className="w-full flex items-center justify-center"
+                            style={{
+                              height: "64px",
+                              background: "rgba(0,0,0,0.3)",
+                            }}
+                          >
+                            {modImg ? (
+                              <img
+                                src={modImg}
+                                alt={modName}
+                                className="w-full h-full object-contain"
+                                style={{ background: "transparent" }}
+                              />
+                            ) : (
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center"
+                                style={{
+                                  background: `${rarity.color}20`,
+                                  border: `1px solid ${rarity.color}40`,
+                                }}
+                              >
+                                <span
+                                  className="font-orbitron text-[8px]"
+                                  style={{ color: rarity.color }}
+                                >
+                                  MOD
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="px-2 py-1.5">
+                            <span
+                              className="font-jetbrains text-[8px] font-bold px-1 py-0.5 rounded"
+                              style={{
+                                background: `${rarity.color}18`,
+                                border: `1px solid ${rarity.color}35`,
+                                color: rarity.color,
+                              }}
+                            >
+                              {rarity.label}
+                            </span>
+                            <p className="font-jetbrains text-[9px] text-white/60 mt-0.5 truncate">
+                              {modName}
+                            </p>
+                            <p
+                              className="font-orbitron text-[9px] font-bold"
+                              style={{ color: "#FAD26A" }}
+                            >
+                              {formatCBRDisplay(listing.price)} CBR
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -277,6 +277,11 @@ export default function Marketplace() {
         sellerPrincipal={sellerPrincipal}
         allListings={safeListings}
         onClose={() => setSellerPrincipal(null)}
+        onListingClick={(listing, tab) => {
+          setSellerPrincipal(null);
+          setActiveTab(tab);
+          setInspectorListing(listing);
+        }}
       />
 
       {/* Create Listing Modal */}
