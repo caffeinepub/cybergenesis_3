@@ -337,6 +337,7 @@ export function useApplyModifier() {
       // PATH B: reactive update — installed mods change land state visible in marketplace
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
       queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      queryClient.invalidateQueries({ queryKey: ["govLeaderboard"] });
       toast.success("Modifier applied!");
     },
     onError: (error: any) => {
@@ -371,6 +372,7 @@ export function useRemoveModifier() {
       // PATH B: reactive update — removing a mod instantly updates marketplace listings
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
       queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      queryClient.invalidateQueries({ queryKey: ["govLeaderboard"] });
       toast.success("Modifier removed from land!");
     },
     onError: (error: any) => {

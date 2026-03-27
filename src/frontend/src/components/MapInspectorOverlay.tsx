@@ -158,7 +158,9 @@ export function MapInspectorOverlay({
           }}
         >
           {Array.from({ length: 49 }, (_, i) => {
-            const mod = mods[i];
+            const mod = mods.find(
+              (m) => getModCatalog(m.modifierType)?.id === i + 1,
+            );
             if (mod) {
               const catalog = getModCatalog(mod.modifierType);
               const rarity = getRarityMeta(mod.rarity_tier);

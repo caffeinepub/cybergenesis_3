@@ -259,16 +259,16 @@ function InspectorModal({
               Lv. {maxMods}/49
             </p>
             <div
-              className="grid gap-[3px]"
-              style={{ gridTemplateColumns: "repeat(7, 20px)" }}
+              className="grid gap-[4px]"
+              style={{ gridTemplateColumns: "repeat(7, 1fr)" }}
             >
               {slots.map((slot) => (
                 <div
                   key={slot.index}
                   className="rounded-[3px]"
                   style={{
-                    width: "20px",
-                    height: "20px",
+                    width: "100%",
+                    aspectRatio: "1",
                     background: slot.filled
                       ? `${slot.color}35`
                       : "rgba(255,255,255,0.04)",
