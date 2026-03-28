@@ -266,7 +266,7 @@ export default function LandDashboard({
     maxCharge > 0 ? Math.min((liveCharge / maxCharge) * 100, 100) : 0;
   const installedModsCount = selectedLand.attachedModifications?.length ?? 0;
 
-  const typeCounts =
+  const _typeCounts =
     modifierInventory?.reduce((acc: Record<string, number>, m) => {
       acc[m.modifierType] = (acc[m.modifierType] || 0) + 1;
       return acc;
@@ -520,159 +520,174 @@ export default function LandDashboard({
             </p>
           ) : (
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-              {modifierInventory.map((modifier, idx) => {
-                const cat = getCatalogEntry(modifier.modifierType);
-                const rarityTier =
-                  cat?.rarity_tier ?? Number(modifier.rarity_tier);
-                const rarityKey = rarityTier.toString();
-                const rarityName =
-                  RARITY_NAMES[rarityKey] || `Tier ${rarityKey}`;
-                const rarityColor = RARITY_COLORS[rarityKey] || "text-gray-400";
-                const countOfThisType = typeCounts[modifier.modifierType] || 1;
-                const isInstalled =
-                  selectedLand?.attachedModifications?.some(
-                    (m) => m.modifierInstanceId === modifier.modifierInstanceId,
-                  ) ?? false;
+              {(() => {
+                const groupedMods = new Map<string, typeof modifierInventory>();
+                for (const mod of modifierInventory) {
+                  const key = mod.modifierType;
+                  if (!groupedMods.has(key)) groupedMods.set(key, []);
+                  groupedMods.get(key)!.push(mod);
+                }
+                return Array.from(groupedMods.entries()).map(
+                  ([modType, instances], idx) => {
+                    const cat = getCatalogEntry(modType);
+                    const rarityTier =
+                      cat?.rarity_tier ?? Number(instances[0].rarity_tier);
+                    const rarityKey = rarityTier.toString();
+                    const rarityName =
+                      RARITY_NAMES[rarityKey] || `Tier ${rarityKey}`;
+                    const rarityColor =
+                      RARITY_COLORS[rarityKey] || "text-gray-400";
+                    const count = instances.length;
 
-                // Slot occupancy: check if another instance of same slot is already on this land
-                const slotId = cat?.id;
-                const slotOccupied =
-                  !isInstalled &&
-                  slotId != null &&
-                  (selectedLand?.attachedModifications?.some((m) => {
-                    const mc = getCatalogEntry(m.modifierType);
-                    return mc?.id === slotId;
-                  }) ??
-                    false);
+                    // Find if any instance of this type is installed on current land
+                    const installedInstance = instances.find((m) =>
+                      selectedLand?.attachedModifications?.some(
+                        (a) => a.modifierInstanceId === m.modifierInstanceId,
+                      ),
+                    );
+                    const isInstalled = !!installedInstance;
 
-                // Keeper biome mismatch: Keeper can only be installed on matching biome land
-                const isKeeperMod = rarityTier === 5;
-                const keeperEntry = isKeeperMod
-                  ? KEEPER_CATALOG.find(
-                      (k) =>
-                        k.region === modifier.modifierType ||
-                        k.name.toLowerCase() ===
-                          modifier.modifierType.toLowerCase(),
-                    )
-                  : undefined;
-                const keeperBiomeMismatch =
-                  isKeeperMod &&
-                  keeperEntry !== undefined &&
-                  selectedLand?.biome !== keeperEntry.region;
+                    // For install: use the first non-installed instance
+                    const installableInstance = instances.find(
+                      (m) =>
+                        !selectedLand?.attachedModifications?.some(
+                          (a) => a.modifierInstanceId === m.modifierInstanceId,
+                        ),
+                    );
 
-                // Derive install button state
-                const installDisabled =
-                  applyModifierMutation.isPending ||
-                  !selectedLand ||
-                  slotOccupied ||
-                  keeperBiomeMismatch;
+                    // Keeper biome check
+                    const isKeeperMod = rarityTier === 5;
+                    const keeperEntry = isKeeperMod
+                      ? KEEPER_CATALOG.find(
+                          (k) =>
+                            k.region === modType ||
+                            k.name.toLowerCase() === modType.toLowerCase(),
+                        )
+                      : undefined;
+                    const keeperBiomeMismatch =
+                      isKeeperMod &&
+                      keeperEntry !== undefined &&
+                      selectedLand?.biome !== keeperEntry.region;
 
-                const installTitle = keeperBiomeMismatch
-                  ? `${keeperEntry!.name} can only be installed on ${keeperEntry!.biome} land`
-                  : slotOccupied
-                    ? "Slot already occupied on this land"
-                    : undefined;
+                    const installDisabled =
+                      applyModifierMutation.isPending ||
+                      !selectedLand ||
+                      !installableInstance ||
+                      keeperBiomeMismatch;
 
-                const installClassName = keeperBiomeMismatch
-                  ? "px-2 py-2 rounded-lg bg-[#f59e0b]/20 border border-[#f59e0b]/50 text-[#f59e0b] text-xs font-orbitron transition-all disabled:opacity-50 min-w-[60px] cursor-not-allowed"
-                  : "px-2 py-2 rounded-lg bg-[#00ff41]/20 border border-[#00ff41]/50 text-[#00ff41] text-xs font-orbitron hover:bg-[#00ff41]/30 transition-all disabled:opacity-50 min-w-[60px]";
+                    const installTitle = keeperBiomeMismatch
+                      ? `${keeperEntry!.name} can only be installed on ${keeperEntry!.biome} land`
+                      : undefined;
 
-                return (
-                  <div
-                    key={modifier.modifierInstanceId.toString()}
-                    className="glassmorphism rounded-lg p-3 border border-[#9933ff]/30 hover:border-[#9933ff]/50 transition-colors"
-                    data-ocid={`modifier_inventory.item.${idx + 1}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Catalog image */}
-                      {cat?.asset_url ? (
-                        <img
-                          src={cat.asset_url}
-                          alt={cat.name}
-                          className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
-                          style={{
-                            filter: `drop-shadow(0 0 6px ${
-                              rarityTier === 5
-                                ? "rgba(204,68,255,0.7)"
-                                : rarityTier === 4
-                                  ? "rgba(250,204,21,0.6)"
-                                  : rarityTier === 3
-                                    ? "rgba(168,85,247,0.5)"
-                                    : rarityTier === 2
-                                      ? "rgba(96,165,250,0.4)"
-                                      : "rgba(156,163,175,0.3)"
-                            })`,
-                          }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-[#9933ff]/20 border border-[#9933ff]/40 flex items-center justify-center flex-shrink-0">
-                          <TrendingUp className="w-5 h-5 text-[#9933ff]" />
-                        </div>
-                      )}
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-white font-medium font-jetbrains text-sm truncate">
-                            {cat?.name ?? modifier.modifierType}
-                          </p>
-                          {countOfThisType >= 2 && (
-                            <span className="text-[10px] font-jetbrains text-[#9933ff]/70 bg-[#9933ff]/10 px-1 rounded flex-shrink-0">
-                              x{countOfThisType}
-                            </span>
-                          )}
-                        </div>
-                        <p className={`text-xs font-jetbrains ${rarityColor}`}>
-                          {rarityName}
-                        </p>
-                        <p className="text-[#9933ff]/60 text-[10px] font-jetbrains">
-                          ID: {modifier.modifierInstanceId.toString()}
-                        </p>
-                      </div>
-                      {/* Toggle button */}
-                      {isInstalled ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleRemoveModifier(modifier.modifierInstanceId)
-                          }
-                          disabled={
-                            removeModifierMutation.isPending || !selectedLand
-                          }
-                          className="px-2 py-2 rounded-lg bg-[#ff3344]/20 border border-[#ff3344]/50 text-[#ff3344] text-xs font-orbitron hover:bg-[#ff3344]/30 transition-all disabled:opacity-50 min-w-[60px]"
-                          data-ocid={`modifier_inventory.remove_button.${idx + 1}`}
-                        >
-                          {removeModifierMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                    return (
+                      <div
+                        key={modType}
+                        className="glassmorphism rounded-lg p-3 border border-[#9933ff]/30 hover:border-[#9933ff]/60 hover:shadow-[0_0_8px_rgba(153,51,255,0.2)] transition-all duration-150"
+                        data-ocid={`modifier_inventory.item.${idx + 1}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Catalog image */}
+                          {cat?.asset_url ? (
+                            <img
+                              src={cat.asset_url}
+                              alt={cat.name}
+                              className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
+                              style={{
+                                filter: `drop-shadow(0 0 6px ${
+                                  rarityTier === 5
+                                    ? "rgba(204,68,255,0.7)"
+                                    : rarityTier === 4
+                                      ? "rgba(250,204,21,0.6)"
+                                      : rarityTier === 3
+                                        ? "rgba(168,85,247,0.5)"
+                                        : rarityTier === 2
+                                          ? "rgba(96,165,250,0.4)"
+                                          : "rgba(156,163,175,0.3)"
+                                })`,
+                              }}
+                            />
                           ) : (
-                            "REMOVE"
+                            <div className="w-10 h-10 rounded-lg bg-[#9933ff]/20 border border-[#9933ff]/40 flex items-center justify-center flex-shrink-0">
+                              <TrendingUp className="w-5 h-5 text-[#9933ff]" />
+                            </div>
                           )}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleApplyModifier(modifier.modifierInstanceId)
-                          }
-                          disabled={installDisabled}
-                          title={installTitle}
-                          className={installClassName}
-                          data-ocid={`modifier_inventory.button.${idx + 1}`}
-                        >
-                          {applyModifierMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white font-medium font-jetbrains text-sm truncate">
+                                {cat?.name ?? modType}
+                              </p>
+                              {count >= 2 && (
+                                <span className="text-[10px] font-jetbrains text-[#9933ff] bg-[#9933ff]/15 border border-[#9933ff]/30 px-1.5 py-0.5 rounded flex-shrink-0 font-bold">
+                                  ×{count}
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              className={`text-xs font-jetbrains ${rarityColor}`}
+                            >
+                              {rarityName}
+                            </p>
+                          </div>
+                          {/* Toggle button */}
+                          {isInstalled ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveModifier(
+                                  installedInstance!.modifierInstanceId,
+                                )
+                              }
+                              disabled={
+                                removeModifierMutation.isPending ||
+                                !selectedLand
+                              }
+                              className="px-3 py-2 rounded-lg bg-[#ff3344]/15 border border-[#ff3344]/50 text-[#ff3344] text-xs font-orbitron transition-all duration-150 hover:bg-[#ff3344]/25 hover:border-[#ff3344]/80 hover:shadow-[0_0_12px_rgba(255,51,68,0.5)] active:scale-95 min-w-[70px] disabled:opacity-40 disabled:cursor-not-allowed"
+                              data-ocid={`modifier_inventory.remove_button.${idx + 1}`}
+                            >
+                              {removeModifierMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                              ) : (
+                                "REMOVE"
+                              )}
+                            </button>
                           ) : keeperBiomeMismatch ? (
-                            "WRONG BIOME"
-                          ) : slotOccupied ? (
-                            "TAKEN"
+                            <button
+                              type="button"
+                              disabled
+                              title={installTitle}
+                              className="px-3 py-2 rounded-lg bg-[#f59e0b]/15 border border-[#f59e0b]/50 text-[#f59e0b] text-xs font-orbitron transition-all duration-150 cursor-not-allowed opacity-70 min-w-[70px]"
+                              data-ocid={`modifier_inventory.button.${idx + 1}`}
+                            >
+                              WRONG BIOME
+                            </button>
                           ) : (
-                            "INSTALL"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                installableInstance &&
+                                handleApplyModifier(
+                                  installableInstance.modifierInstanceId,
+                                )
+                              }
+                              disabled={installDisabled}
+                              title={installTitle}
+                              className="px-3 py-2 rounded-lg bg-[#00ff41]/15 border border-[#00ff41]/50 text-[#00ff41] text-xs font-orbitron transition-all duration-150 hover:bg-[#00ff41]/25 hover:border-[#00ff41]/80 hover:shadow-[0_0_12px_rgba(0,255,65,0.5)] active:scale-95 min-w-[70px] disabled:opacity-40 disabled:cursor-not-allowed"
+                              data-ocid={`modifier_inventory.button.${idx + 1}`}
+                            >
+                              {applyModifierMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                              ) : (
+                                "INSTALL"
+                              )}
+                            </button>
                           )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    );
+                  },
                 );
-              })}
+              })()}
             </div>
           )}
         </CardContent>

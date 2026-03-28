@@ -273,7 +273,7 @@ export default function Discovery() {
               </p>
               <button
                 type="button"
-                className="px-4 py-2 rounded-lg glassmorphism border border-[#00ffff]/30 text-[#00ffff] font-orbitron text-sm hover:border-[#00ffff]/60 transition-all flex-shrink-0"
+                className="px-4 py-2 rounded-lg bg-[#00ffff]/15 border border-[#00ffff]/50 text-[#00ffff] font-orbitron text-sm transition-all duration-150 hover:bg-[#00ffff]/25 hover:border-[#00ffff]/80 hover:shadow-[0_0_12px_rgba(0,255,255,0.5)] active:scale-95 flex-shrink-0"
                 data-ocid="discovery.buy_cbr_button"
               >
                 BUY CBR
@@ -358,7 +358,13 @@ export default function Discovery() {
                   type="button"
                   onClick={() => handleDiscoverCache(tier)}
                   disabled={discoveringTier !== null || !selectedLand}
-                  className="w-full px-4 py-1.5 rounded-lg btn-gradient-green text-black font-bold font-orbitron disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={
+                    tier === 1
+                      ? "w-full px-4 py-2 rounded-lg bg-[#00ffff]/15 border border-[#00ffff]/50 text-[#00ffff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#00ffff]/25 hover:border-[#00ffff]/80 hover:shadow-[0_0_14px_rgba(0,255,255,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                      : tier === 2
+                        ? "w-full px-4 py-2 rounded-lg bg-blue-500/15 border border-blue-400/50 text-blue-300 font-bold font-orbitron text-sm transition-all duration-150 hover:bg-blue-500/25 hover:border-blue-400/80 hover:shadow-[0_0_14px_rgba(96,165,250,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        : "w-full px-4 py-2 rounded-lg bg-[#9933ff]/15 border border-[#9933ff]/50 text-[#9933ff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#9933ff]/25 hover:border-[#9933ff]/80 hover:shadow-[0_0_14px_rgba(153,51,255,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }
                   data-ocid={`discovery.discover_cache_button.${tier}`}
                 >
                   {discoveringTier === tier ? (
@@ -512,22 +518,22 @@ export default function Discovery() {
                           ✓ Opened
                         </span>
                       ) : (
-                        <Button
+                        <button
+                          type="button"
                           onClick={() => handleProcessCache(cache.cache_id)}
                           disabled={!canOpen || processingCacheId !== null}
-                          size="sm"
-                          className="bg-[#00ff41] hover:bg-[#00ff41]/80 text-black font-bold font-orbitron text-xs px-3 py-1.5 rounded"
+                          className="px-4 py-2 rounded-lg bg-[#00ff41]/15 border border-[#00ff41]/50 text-[#00ff41] font-bold font-orbitron text-xs transition-all duration-150 hover:bg-[#00ff41]/25 hover:border-[#00ff41]/80 hover:shadow-[0_0_12px_rgba(0,255,65,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed min-w-[60px]"
                           data-ocid={`my_caches.open_button.${idx + 1}`}
                         >
                           {isProcessing ? (
                             <>
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              <Loader2 className="w-3 h-3 animate-spin mr-1 inline" />
                               Opening...
                             </>
                           ) : (
                             "OPEN"
                           )}
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
