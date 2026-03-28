@@ -4,12 +4,21 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 
+// Anchor beacon names are [crlmk]_NN (e.g. c_01, r_15, k_01)
+const ANCHOR_PATTERN = /^[crlmk]_\d{2}$/;
+
 interface LandModelProps {
   modelUrl: string;
   biome?: string;
+  /** Called once after the model loads with a map of anchor name → world position */
+  onAnchorsReady?: (positions: Map<string, THREE.Vector3>) => void;
 }
 
-export default function LandModel({ modelUrl, biome }: LandModelProps) {
+export default function LandModel({
+  modelUrl,
+  biome,
+  onAnchorsReady,
+}: LandModelProps) {
   const { gl, camera } = useThree();
   const fittedRef = useRef(false);
   const isInitialized = useRef(false);
@@ -17,7 +26,6 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
 
   // Cached list of emissive materials — built once at init, reused every frame
   const emissiveMaterialsRef = useRef<THREE.MeshStandardMaterial[]>([]);
-  // Reusable BLACK color for comparison — avoids `new THREE.Color` every frame
 
   const ktx2Loader = useMemo(() => {
     const loader = new KTX2Loader();
@@ -76,7 +84,6 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
               m.emissive = new THREE.Color(0xffffff);
               m.toneMapped = false;
               m.userData.baseEmissive = config.emissive;
-              // Cache this material for useFrame — no traverse needed each frame
               emissiveMaterialsRef.current.push(m);
               console.log(
                 `[LandModel] Emissive enabled: baseEmissive=${config.emissive}, envMapIntensity=${config.env}`,
@@ -84,9 +91,6 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
             } else {
               m.emissive = new THREE.Color(0x000000);
               m.userData.baseEmissive = 0.0;
-              console.log(
-                "[LandModel] No emissive map detected, glow disabled",
-              );
             }
             const textures = [
               m.map,
@@ -101,19 +105,14 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
                 tex.needsUpdate = true;
               }
             }
-            console.log(
-              `[LandModel] Anisotropy applied to textures: ${textures.filter((t) => t).length} textures updated`,
-            );
           }
           if (hasEmissiveMap) {
             obj.layers.enable(1);
-            console.log(
-              `[LandModel] Mesh "${obj.name}" assigned to Layer 1 (emissive/bloom target)`,
-            );
           }
         }
       });
     }
+
     if (!fittedRef.current && camera instanceof THREE.PerspectiveCamera) {
       const box = new THREE.Box3().setFromObject(gltf.scene);
       const center = box.getCenter(new THREE.Vector3());
@@ -128,8 +127,30 @@ export default function LandModel({ modelUrl, biome }: LandModelProps) {
       fittedRef.current = true;
       console.log("[LandModel] Camera auto-fitted to model bounds");
     }
+
+    // ── Extract anchor beacon positions ───────────────────────────────────────
+    // Traverse the loaded scene and collect any objects whose names match the
+    // anchor pattern (c_01, r_15, l_03, m_06, k_01, etc.) that were placed in
+    // Blender as Empty objects / plain Object3Ds.
+    if (onAnchorsReady) {
+      const anchors = new Map<string, THREE.Vector3>();
+      const worldPos = new THREE.Vector3();
+      gltf.scene.traverse((obj: THREE.Object3D) => {
+        if (ANCHOR_PATTERN.test(obj.name)) {
+          obj.getWorldPosition(worldPos);
+          anchors.set(obj.name, worldPos.clone());
+        }
+      });
+      if (anchors.size > 0) {
+        console.log(`[LandModel] Found ${anchors.size} anchor beacons`);
+        onAnchorsReady(anchors);
+      } else {
+        console.log("[LandModel] No anchor beacons found in this model");
+      }
+    }
+
     isInitialized.current = true;
-  }, [gltf, gl, camera, modelUrl, biome]);
+  }, [gltf, gl, camera, modelUrl, biome, onAnchorsReady]);
 
   // Optimized useFrame: iterates only cached emissive materials, no traverse
   useFrame((state) => {

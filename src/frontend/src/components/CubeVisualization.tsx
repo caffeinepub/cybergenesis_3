@@ -1,8 +1,10 @@
+import type { ModifierInstance } from "@/backend";
 import { Environment, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import React, {
   Suspense,
   createRef,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -13,11 +15,16 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import CanvasBiomePortal from "./CanvasBiomePortal";
+import CanvasLoader from "./CanvasLoader";
 import LandModel from "./LandModel";
+import ModsLayer from "./ModsLayer";
 
 interface CubeVisualizationProps {
   biome?: string;
+  /** Installed mods for the current land — drives 3D mod placement */
+  installedMods?: ModifierInstance[];
+  /** Current land ID — used as seed for deterministic anchor assignment */
+  landId?: bigint;
 }
 
 const BIOME_MODEL_MAP: Record<string, string> = {
@@ -86,7 +93,7 @@ const COMPOSITE_FRAGMENT = `
 const keyLightRef = createRef<THREE.DirectionalLight>();
 const sunLightRef = createRef<THREE.DirectionalLight>();
 
-// ── Three.js scene internals ───────────────────────────────────────────────────
+// ── Three.js scene internals ─────────────────────────────────────────────────────────────────
 
 function CameraLayerSetup() {
   const { camera } = useThree();
@@ -379,7 +386,11 @@ function SelectiveBloomEffect() {
   return null;
 }
 
-export default function CubeVisualization({ biome }: CubeVisualizationProps) {
+export default function CubeVisualization({
+  biome,
+  installedMods,
+  landId,
+}: CubeVisualizationProps) {
   const modelUrl = useMemo(() => {
     if (!biome) return null;
     const url = BIOME_MODEL_MAP[biome];
@@ -388,6 +399,18 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Anchor positions extracted from the land GLB by LandModel
+  const [anchorPositions, setAnchorPositions] = useState<
+    Map<string, THREE.Vector3>
+  >(new Map());
+
+  const handleAnchorsReady = useCallback(
+    (positions: Map<string, THREE.Vector3>) => {
+      setAnchorPositions(positions);
+    },
+    [],
+  );
 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
@@ -420,16 +443,19 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
     );
   }
 
+  const hasMods =
+    installedMods && installedMods.length > 0 && landId !== undefined;
+
   return (
     <div ref={containerRef} className="relative w-full h-full group">
       {/* Biome Portal loader — shown while scene initialises */}
-      <CanvasBiomePortal />
+      <CanvasLoader />
 
       <Canvas
         camera={{ position: [0, 0, 6], fov: 45 }}
-        dpr={[1, 1.5]}
+        dpr={[1, 2]}
         gl={{
-          antialias: false,
+          antialias: true,
           powerPreference: "high-performance",
           alpha: false,
           ...({ dithering: true } as any),
@@ -444,7 +470,19 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
           <SceneSetup />
           <CameraLayerSetup />
           <BackgroundSphere />
-          <LandModel modelUrl={modelUrl} biome={biome} />
+          <LandModel
+            modelUrl={modelUrl}
+            biome={biome}
+            onAnchorsReady={handleAnchorsReady}
+          />
+          {/* ModsLayer is lazy — only mounts tiers that have installed mods */}
+          {hasMods && (
+            <ModsLayer
+              installedMods={installedMods!}
+              anchorPositions={anchorPositions}
+              landId={landId!}
+            />
+          )}
           <Environment
             files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/artist_workshop_1k.hdr"
             environmentIntensity={1.5}

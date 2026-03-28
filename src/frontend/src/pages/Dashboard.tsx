@@ -141,7 +141,11 @@ export default function Dashboard() {
                 flexDirection: "column",
               }}
             >
-              <CubeVisualization biome={currentLand.biome} />
+              <CubeVisualization
+                biome={currentLand.biome}
+                installedMods={currentLand.attachedModifications}
+                landId={currentLand.landId}
+              />
             </div>
 
             <div className="space-y-4">
