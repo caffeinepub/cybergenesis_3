@@ -110,6 +110,7 @@ actor CyberGenesisLandMint {
   var nextCacheId : Nat = 0;
   var nextLandId : Nat = 0;
   var nextModifierInstanceId : Nat = 0;
+  let usedAutoMint = Map.empty<Principal, Bool>();
 
   var marketplaceCanister : ?Principal = null;
   var governanceCanister : ?Principal = null;
@@ -487,30 +488,38 @@ actor CyberGenesisLandMint {
             case null { [] };
           };
           if (sellerRemaining.size() == 0) {
-            let hash = hashPrincipal(principal) + nextLandId;
-            let coords = generateCoordinates(hash);
-            let biomeVal = getBiome(hash);
-            let rv = (hashPrincipal(principal) + nextLandId) % 200;
-            let isMV = rv == 0;
-            let finalBiomeAuto = if (isMV) { "MYTHIC_VOID" } else { biomeVal };
-            let btmAuto = if (isMV) { 1.25 } else { 1.0 };
-            let autoLand : LandData = {
-              principal = principal;
-              coordinates = coords;
-              biome = finalBiomeAuto;
-              upgradeLevel = 0;
-              lastClaimTime = 0;
-              plotName = "My Plot";
-              decorationURL = null;
-              baseTokenMultiplier = btmAuto;
-              cycleCharge = 0;
-              chargeCap = 1000;
-              lastChargeUpdate = Time.now();
-              landId = nextLandId;
-              attachedModifications = [];
+            // One-time safety-net auto-mint: allowed only once per principal lifetime
+            // If already used → restore sold land and cancel transfer
+            switch (usedAutoMint.get(principal)) {
+              case (?_) {
+                landRegistry.add(principal, [lands[index]]);
+                return false;
+              };
+              case null {
+                // First time: grant Common-only auto-mint (Forest Valley or Island Archipelago)
+                let hash = hashPrincipal(principal) + nextLandId;
+                let coords = generateCoordinates(hash);
+                let safetyBiome = if (hash % 2 == 0) { "FOREST_VALLEY" } else { "ISLAND_ARCHIPELAGO" };
+                let autoLand : LandData = {
+                  principal = principal;
+                  coordinates = coords;
+                  biome = safetyBiome;
+                  upgradeLevel = 0;
+                  lastClaimTime = 0;
+                  plotName = "My Plot";
+                  decorationURL = null;
+                  baseTokenMultiplier = 1.0;
+                  cycleCharge = 0;
+                  chargeCap = 1000;
+                  lastChargeUpdate = Time.now();
+                  landId = nextLandId;
+                  attachedModifications = [];
+                };
+                nextLandId += 1;
+                landRegistry.add(principal, [autoLand]);
+                usedAutoMint.add(principal, true);
+              };
             };
-            nextLandId += 1;
-            landRegistry.add(principal, [autoLand]);
           };
           return true;
         };
