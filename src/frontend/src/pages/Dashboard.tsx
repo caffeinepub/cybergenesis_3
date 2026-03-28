@@ -15,7 +15,6 @@ import CubeVisualization from "../components/CubeVisualization";
 import Discovery from "../components/Discovery";
 import Governance from "../components/Governance";
 import LandDashboard from "../components/LandDashboard";
-import LandSelector from "../components/LandSelector";
 import Leaderboard from "../components/Leaderboard";
 import MapView from "../components/MapView";
 import Marketplace from "../components/Marketplace";
@@ -132,16 +131,6 @@ export default function Dashboard() {
 
       <div className="dashboard min-h-screen text-white relative overflow-hidden">
         <div className="relative z-10 container mx-auto px-4 py-8">
-          {lands.length > 1 && (
-            <div className="mb-6">
-              <LandSelector
-                lands={lands}
-                selectedIndex={selectedLandIndex}
-                onSelectLand={setSelectedLandIndex}
-              />
-            </div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div
               className="lg:col-span-2 rounded-lg overflow-hidden glassmorphism neon-border box-glow-purple animate-pulse-glow-purple"
@@ -191,7 +180,10 @@ export default function Dashboard() {
 
           <div className="rounded-lg glassmorphism neon-border box-glow-purple p-6">
             {activeTab === "land" && (
-              <LandDashboard selectedLandIndex={selectedLandIndex} />
+              <LandDashboard
+                selectedLandIndex={selectedLandIndex}
+                onSelectLand={setSelectedLandIndex}
+              />
             )}
             {activeTab === "discovery" && <Discovery />}
             {activeTab === "craft" && <ComingSoon />}

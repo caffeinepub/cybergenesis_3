@@ -242,12 +242,14 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       attributionControl: false,
       maxBoundsViscosity: 1.0,
       inertia: true,
-      inertiaDeceleration: 300,
-      inertiaMaxSpeed: 800,
-      easeLinearity: 0.2,
+      inertiaDeceleration: 1800,
+      inertiaMaxSpeed: 1500,
+      easeLinearity: 0.25,
       zoomAnimation: true,
       zoomAnimationThreshold: 4,
       wheelPxPerZoomLevel: 60,
+      zoomSnap: 0,
+      zoomDelta: 0.3,
       scrollWheelZoom: false,
       fadeAnimation: false,
     });
@@ -401,25 +403,30 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       return;
     }
 
+    let rafId: number | null = null;
     const recalc = () => {
-      const pt = map.latLngToContainerPoint(popup.latlng);
-      const container = mapContainerRef.current;
-      const cw = container ? container.clientWidth : window.innerWidth;
-      const ch = container ? container.clientHeight : window.innerHeight;
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const pt = map.latLngToContainerPoint(popup.latlng);
+        const container = mapContainerRef.current;
+        const cw = container ? container.clientWidth : window.innerWidth;
+        const ch = container ? container.clientHeight : window.innerHeight;
 
-      const CLOSE_MARGIN = 40;
-      if (
-        pt.x < -CLOSE_MARGIN ||
-        pt.x > cw + CLOSE_MARGIN ||
-        pt.y < -CLOSE_MARGIN ||
-        pt.y > ch + CLOSE_MARGIN
-      ) {
-        setPopup(null);
-        setPopupPx(null);
-        return;
-      }
+        const CLOSE_MARGIN = 40;
+        if (
+          pt.x < -CLOSE_MARGIN ||
+          pt.x > cw + CLOSE_MARGIN ||
+          pt.y < -CLOSE_MARGIN ||
+          pt.y > ch + CLOSE_MARGIN
+        ) {
+          setPopup(null);
+          setPopupPx(null);
+          return;
+        }
 
-      setPopupPx({ x: pt.x, y: pt.y });
+        setPopupPx({ x: pt.x, y: pt.y });
+      });
     };
 
     recalc();
@@ -428,6 +435,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     return () => {
       map.off("move", recalc);
       map.off("zoom", recalc);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [popup]);
 
@@ -501,7 +509,7 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       map.flyTo(myCoords, -0.5, {
         animate: true,
         duration: 1.8,
-        easeLinearity: 0.2,
+        easeLinearity: 0.25,
       });
       setTimeout(() => setIsZoomReady(true), 700);
     } else if (!myCoords) {

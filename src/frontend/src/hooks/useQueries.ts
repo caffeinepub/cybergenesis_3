@@ -741,6 +741,7 @@ export function useBuyItem() {
       queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
       queryClient.invalidateQueries({ queryKey: ["tokenBalance"] });
       queryClient.invalidateQueries({ queryKey: ["publicLandDataBatch"] });
+      queryClient.invalidateQueries({ queryKey: ["topLands"] });
       toast.success("Purchase successful!");
     },
     onError: (error: any) => {

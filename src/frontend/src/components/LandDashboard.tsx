@@ -13,6 +13,8 @@ import { useTokenActor } from "@/hooks/useTokenActor";
 import { formatTokenBalance } from "@/lib/tokenUtils";
 import {
   BatteryCharging,
+  ChevronLeft,
+  ChevronRight,
   Gem,
   Loader2,
   MapPin,
@@ -28,6 +30,7 @@ import {
 
 interface LandDashboardProps {
   selectedLandIndex: number;
+  onSelectLand: (index: number) => void;
 }
 
 const CHARGE_RATES_BY_LEVEL = [100, 200, 300, 400, 500];
@@ -64,6 +67,7 @@ function getCatalogEntry(modifierType: string) {
 
 export default function LandDashboard({
   selectedLandIndex,
+  onSelectLand,
 }: LandDashboardProps) {
   const { data: lands, isLoading: landsLoading } = useGetLandData();
   const {
@@ -84,6 +88,12 @@ export default function LandDashboard({
   );
   const [isCooldownActive, setIsCooldownActive] = useState(false);
   const [liveCharge, setLiveCharge] = useState(0);
+
+  const totalLands = lands?.length ?? 1;
+  const handlePrev = () =>
+    onSelectLand((selectedLandIndex - 1 + totalLands) % totalLands);
+  const handleNext = () => onSelectLand((selectedLandIndex + 1) % totalLands);
+  const showNav = totalLands > 1;
 
   const selectedLand: LandData | undefined = lands?.[selectedLandIndex];
 
@@ -313,9 +323,32 @@ export default function LandDashboard({
       {/* LAND INFORMATION */}
       <Card className="glassmorphism neon-border box-glow-cyan">
         <CardHeader>
-          <CardTitle className="text-[#00ffff] flex items-center gap-2 font-orbitron text-glow-cyan">
+          <CardTitle className="text-[#00ffff] flex items-center gap-2 w-full font-orbitron text-glow-cyan">
             <MapPin className="w-5 h-5" />
             LAND INFORMATION
+            {showNav && (
+              <div className="flex items-center gap-1 ml-auto">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  data-ocid="land.pagination_prev"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#00ffff]/10 border border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/25 hover:border-[#00ffff]/80 hover:shadow-[0_0_10px_rgba(0,255,255,0.5)] active:scale-95 transition-all duration-150"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[#00ffff]/70 font-jetbrains text-xs px-1 min-w-[32px] text-center tabular-nums">
+                  {selectedLandIndex + 1}/{totalLands}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  data-ocid="land.pagination_next"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#00ffff]/10 border border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/25 hover:border-[#00ffff]/80 hover:shadow-[0_0_10px_rgba(0,255,255,0.5)] active:scale-95 transition-all duration-150"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -500,6 +533,16 @@ export default function LandDashboard({
                   selectedLand?.attachedModifications?.some(
                     (m) => m.modifierInstanceId === modifier.modifierInstanceId,
                   ) ?? false;
+                // Slot occupancy: check if another instance of same slot is already on this land
+                const slotId = cat?.id;
+                const slotOccupied =
+                  !isInstalled &&
+                  slotId != null &&
+                  (selectedLand?.attachedModifications?.some((m) => {
+                    const mc = getCatalogEntry(m.modifierType);
+                    return mc?.id === slotId;
+                  }) ??
+                    false);
 
                 return (
                   <div
@@ -578,13 +621,22 @@ export default function LandDashboard({
                             handleApplyModifier(modifier.modifierInstanceId)
                           }
                           disabled={
-                            applyModifierMutation.isPending || !selectedLand
+                            applyModifierMutation.isPending ||
+                            !selectedLand ||
+                            slotOccupied
+                          }
+                          title={
+                            slotOccupied
+                              ? "Slot already occupied on this land"
+                              : undefined
                           }
                           className="px-2 py-2 rounded-lg bg-[#00ff41]/20 border border-[#00ff41]/50 text-[#00ff41] text-xs font-orbitron hover:bg-[#00ff41]/30 transition-all disabled:opacity-50 min-w-[60px]"
                           data-ocid={`modifier_inventory.button.${idx + 1}`}
                         >
                           {applyModifierMutation.isPending ? (
                             <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                          ) : slotOccupied ? (
+                            "TAKEN"
                           ) : (
                             "INSTALL"
                           )}
