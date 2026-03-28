@@ -533,6 +533,7 @@ export default function LandDashboard({
                   selectedLand?.attachedModifications?.some(
                     (m) => m.modifierInstanceId === modifier.modifierInstanceId,
                   ) ?? false;
+
                 // Slot occupancy: check if another instance of same slot is already on this land
                 const slotId = cat?.id;
                 const slotOccupied =
@@ -543,6 +544,38 @@ export default function LandDashboard({
                     return mc?.id === slotId;
                   }) ??
                     false);
+
+                // Keeper biome mismatch: Keeper can only be installed on matching biome land
+                const isKeeperMod = rarityTier === 5;
+                const keeperEntry = isKeeperMod
+                  ? KEEPER_CATALOG.find(
+                      (k) =>
+                        k.region === modifier.modifierType ||
+                        k.name.toLowerCase() ===
+                          modifier.modifierType.toLowerCase(),
+                    )
+                  : undefined;
+                const keeperBiomeMismatch =
+                  isKeeperMod &&
+                  keeperEntry !== undefined &&
+                  selectedLand?.biome !== keeperEntry.region;
+
+                // Derive install button state
+                const installDisabled =
+                  applyModifierMutation.isPending ||
+                  !selectedLand ||
+                  slotOccupied ||
+                  keeperBiomeMismatch;
+
+                const installTitle = keeperBiomeMismatch
+                  ? `${keeperEntry!.name} can only be installed on ${keeperEntry!.biome} land`
+                  : slotOccupied
+                    ? "Slot already occupied on this land"
+                    : undefined;
+
+                const installClassName = keeperBiomeMismatch
+                  ? "px-2 py-2 rounded-lg bg-[#f59e0b]/20 border border-[#f59e0b]/50 text-[#f59e0b] text-xs font-orbitron transition-all disabled:opacity-50 min-w-[60px] cursor-not-allowed"
+                  : "px-2 py-2 rounded-lg bg-[#00ff41]/20 border border-[#00ff41]/50 text-[#00ff41] text-xs font-orbitron hover:bg-[#00ff41]/30 transition-all disabled:opacity-50 min-w-[60px]";
 
                 return (
                   <div
@@ -620,21 +653,15 @@ export default function LandDashboard({
                           onClick={() =>
                             handleApplyModifier(modifier.modifierInstanceId)
                           }
-                          disabled={
-                            applyModifierMutation.isPending ||
-                            !selectedLand ||
-                            slotOccupied
-                          }
-                          title={
-                            slotOccupied
-                              ? "Slot already occupied on this land"
-                              : undefined
-                          }
-                          className="px-2 py-2 rounded-lg bg-[#00ff41]/20 border border-[#00ff41]/50 text-[#00ff41] text-xs font-orbitron hover:bg-[#00ff41]/30 transition-all disabled:opacity-50 min-w-[60px]"
+                          disabled={installDisabled}
+                          title={installTitle}
+                          className={installClassName}
                           data-ocid={`modifier_inventory.button.${idx + 1}`}
                         >
                           {applyModifierMutation.isPending ? (
                             <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                          ) : keeperBiomeMismatch ? (
+                            "WRONG BIOME"
                           ) : slotOccupied ? (
                             "TAKEN"
                           ) : (

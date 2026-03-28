@@ -149,17 +149,16 @@ actor CyberGenesisLandMint {
     hash;
   };
 
+  // Weighted biome distribution: Common 55%, Rare 35%, Mythic 10%
   func getBiome(hash : Nat) : Text {
-    switch (hash % 7) {
-      case 0 { "FOREST_VALLEY" };
-      case 1 { "ISLAND_ARCHIPELAGO" };
-      case 2 { "SNOW_PEAK" };
-      case 3 { "DESERT_DUNE" };
-      case 4 { "VOLCANIC_CRAG" };
-      case 5 { "MYTHIC_VOID" };
-      case 6 { "MYTHIC_AETHER" };
-      case _ { Runtime.trap("Unexpected biome value") };
-    };
+    let r = hash % 100;
+    if      (r < 28) { "FOREST_VALLEY" }        // 28%
+    else if (r < 55) { "ISLAND_ARCHIPELAGO" }   // 27%
+    else if (r < 67) { "SNOW_PEAK" }            // 12%
+    else if (r < 79) { "DESERT_DUNE" }          // 12%
+    else if (r < 90) { "VOLCANIC_CRAG" }        // 11%
+    else if (r < 95) { "MYTHIC_VOID" }          // 5%
+    else             { "MYTHIC_AETHER" }         // 5%
   };
 
   func generateCoordinates(hash : Nat) : Coordinates {
@@ -753,6 +752,11 @@ actor CyberGenesisLandMint {
             let land = userLands[index];
             if (land.attachedModifications.size() >= 49) {
               Runtime.trap("Slot limit reached: maximum 49 modifiers per land");
+            };
+            // Keeper biome check: rarity_tier 5 = Keeper, modifierType = keeper region
+            let mod = userInventory[modIndex];
+            if (mod.rarity_tier == 5 and mod.modifierType != land.biome) {
+              Runtime.trap("Keeper biome mismatch: this Keeper belongs to " # mod.modifierType # " only");
             };
             let updatedLand = { land with
               attachedModifications = ([land.attachedModifications, [userInventory[modIndex]]]).flatten();

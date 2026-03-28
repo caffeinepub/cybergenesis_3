@@ -1,6 +1,6 @@
 import { Environment, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
+import React, {
   Suspense,
   createRef,
   useEffect,
@@ -13,6 +13,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import CanvasBiomePortal from "./CanvasBiomePortal";
 import LandModel from "./LandModel";
 
 interface CubeVisualizationProps {
@@ -66,7 +67,6 @@ const COMPOSITE_FRAGMENT = `
     vec3 center = texture2D(baseTexture, vUv).rgb;
     vec3 bloomRGB = texture2D(bloomTexture, vUv).rgb;
 
-    // 1. Luma-based Sharpen with Artifact Protection (v4)
     float lumaC = getLuma(center);
     float lumaL = getLuma(texture2D(baseTexture, vUv - vec2(texel.x, 0.0)).rgb);
     float lumaR = getLuma(texture2D(baseTexture, vUv + vec2(texel.x, 0.0)).rgb);
@@ -85,6 +85,8 @@ const COMPOSITE_FRAGMENT = `
 
 const keyLightRef = createRef<THREE.DirectionalLight>();
 const sunLightRef = createRef<THREE.DirectionalLight>();
+
+// ── Three.js scene internals ───────────────────────────────────────────────────
 
 function CameraLayerSetup() {
   const { camera } = useThree();
@@ -145,7 +147,7 @@ const BackgroundSphere = () => {
     uniform float time;
     uniform vec2 resolution;
 
-    #define NUM_OCTAVES 6
+    #define NUM_OCTAVES 4
 
     float random(vec2 pos) {
         return fract(sin(dot(pos.xy, vec2(13.9898, 78.233))) * 43758.5453123);
@@ -420,11 +422,14 @@ export default function CubeVisualization({ biome }: CubeVisualizationProps) {
 
   return (
     <div ref={containerRef} className="relative w-full h-full group">
+      {/* Biome Portal loader — shown while scene initialises */}
+      <CanvasBiomePortal />
+
       <Canvas
         camera={{ position: [0, 0, 6], fov: 45 }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         gl={{
-          antialias: true,
+          antialias: false,
           powerPreference: "high-performance",
           alpha: false,
           ...({ dithering: true } as any),
