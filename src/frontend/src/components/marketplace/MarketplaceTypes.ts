@@ -1,4 +1,7 @@
-import { PLANNED_MODIFIER_CATALOG } from "../../data/modifierCatalog";
+import {
+  KEEPER_CATALOG,
+  PLANNED_MODIFIER_CATALOG,
+} from "../../data/modifierCatalog";
 import type { ItemType } from "../../hooks/useQueries";
 
 // ─────────────────────────────────────────────
@@ -55,6 +58,13 @@ export const RARITY_META: Record<
     glow: "rgba(250,204,21,0.9)",
     textClass: "text-yellow-400",
   },
+  // Tier 5 — Keeper (slot 49)
+  5: {
+    label: "KEEPER",
+    color: "#cc44ff",
+    glow: "rgba(204,68,255,0.75)",
+    textClass: "text-purple-300",
+  },
 };
 
 // ─────────────────────────────────────────────
@@ -102,11 +112,53 @@ export function truncatePrincipal(p: string): string {
   return `${p.slice(0, 6)}...${p.slice(-5)}`;
 }
 
+/**
+ * Look up a mod catalog entry by modifierType string.
+ * Searches regular mods (IDs 1–48) first, then Keepers (ID 49).
+ * Returns a unified shape with id and rarity_tier for all callers.
+ */
 export function getModCatalog(modifierType: string) {
-  return PLANNED_MODIFIER_CATALOG.find((m) => m.name === modifierType);
+  // Regular mods
+  const regular = PLANNED_MODIFIER_CATALOG.find((m) => m.name === modifierType);
+  if (regular) return regular;
+
+  // Keepers — match by name (e.g. "Forest Keeper") or by region string
+  // (e.g. "FOREST_VALLEY") since backend stores the region as modifierType
+  const keeper = KEEPER_CATALOG.find(
+    (k) =>
+      k.name === modifierType ||
+      k.region === modifierType ||
+      k.name.toLowerCase() === modifierType.toLowerCase(),
+  );
+  if (keeper) {
+    return {
+      id: 49 as const,
+      name: keeper.name,
+      rarity_tier: 5 as const,
+      asset_url: keeper.asset_url,
+      region: keeper.region,
+      color: keeper.color,
+    };
+  }
+
+  return undefined;
 }
 
+/**
+ * Look up a mod catalog entry by numeric catalog ID.
+ * For ID 49 (Keeper) returns a generic Keeper entry since the specific
+ * Keeper variant is not known from the ID alone.
+ */
 export function getCatalogById(id: number) {
+  if (id === 49) {
+    // Generic Keeper entry — used when only the ID is available (e.g. SellerModal)
+    return {
+      id: 49 as const,
+      name: "KEEPER",
+      rarity_tier: 5 as const,
+      asset_url: KEEPER_CATALOG[0]?.asset_url ?? "",
+    };
+  }
   return PLANNED_MODIFIER_CATALOG.find((m) => m.id === id);
 }
 

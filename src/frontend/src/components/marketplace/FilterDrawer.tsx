@@ -140,7 +140,7 @@ export function FilterDrawer({
                 <div className="flex-1 h-px bg-white/10" />
               </div>
               <div className="space-y-2">
-                {([1, 2, 3, 4] as const).map((tier) => {
+                {([1, 2, 3, 4, 5] as const).map((tier) => {
                   const meta = RARITY_META[tier];
                   const checked = filters.rarities.has(tier);
                   return (
