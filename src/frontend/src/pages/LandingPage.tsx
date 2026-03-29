@@ -238,14 +238,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5 }}
             className="mb-5 flex justify-center"
           >
-            <div
-              style={{
-                boxShadow:
-                  "0 0 24px rgba(168,85,247,0.45), 0 0 48px rgba(0,255,255,0.2)",
-                borderRadius: "12px",
-                display: "inline-block",
-              }}
-            >
+            <div style={{ display: "inline-block" }}>
               <img
                 src="/assets/uploads/img_0846-019d3b70-3994-75dc-bdb5-7a56b13109eb-1.webp"
                 alt="CyberGenesis Logo"

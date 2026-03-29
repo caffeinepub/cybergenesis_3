@@ -52,42 +52,42 @@ const BIOME_REGIONS: Record<
 // Image overlays: background + 6 regions
 const MAP_LAYERS = [
   {
-    path: "/assets/uploads/map_mythic.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/mythic.WEBP",
     bounds: [
       [2300, 2300],
       [3700, 3700],
     ] as [[number, number], [number, number]],
   },
   {
-    path: "/assets/uploads/map_snow_peak.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/snow_peak.WEBP",
     bounds: [
       [1800, 600],
       [3200, 2000],
     ] as [[number, number], [number, number]],
   },
   {
-    path: "/assets/uploads/map_volcanic_crag.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/volcanic_crag.WEBP",
     bounds: [
       [1800, 3800],
       [3200, 5200],
     ] as [[number, number], [number, number]],
   },
   {
-    path: "/assets/uploads/map_forest_valley.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/forest_valley.WEBP",
     bounds: [
       [3800, 500],
       [5200, 1900],
     ] as [[number, number], [number, number]],
   },
   {
-    path: "/assets/uploads/map_desert_dune.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/desert_dune.WEBP",
     bounds: [
       [3800, 4000],
       [5200, 5400],
     ] as [[number, number], [number, number]],
   },
   {
-    path: "/assets/uploads/map_island_archipelago.webp",
+    path: "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Maps/island_archipelago.WEBP",
     bounds: [
       [4500, 2000],
       [5900, 3800],
