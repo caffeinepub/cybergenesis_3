@@ -232,29 +232,22 @@ export default function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4">
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
-          {/*
-            Logo wrapper — only y-translation animated, NO opacity/transform
-            properties that create a stacking context and break mix-blend-mode.
-            mix-blend-mode:screen is placed directly on the <img> so black
-            pixels in the webp composite against the actual page background.
-          */}
-          <motion.div
-            initial={{ y: -10 }}
-            animate={{ y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-5 flex justify-center"
+          {/* Logo wrapper uses box-shadow (NOT filter/drop-shadow) so it does NOT
+              create an isolated compositor layer. Native webp alpha transparency
+              works correctly without any mix-blend-mode tricks. */}
+          <div
+            className="mb-5 flex justify-center rounded-xl"
+            style={{
+              boxShadow:
+                "0 0 24px rgba(168,85,247,0.5), 0 0 48px rgba(0,255,255,0.2)",
+            }}
           >
             <img
               src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
               alt="CyberGenesis Logo"
               className="w-28 h-auto sm:w-36 object-contain"
-              style={{
-                filter:
-                  "drop-shadow(0 0 18px rgba(168,85,247,0.55)) drop-shadow(0 0 36px rgba(0,255,255,0.25))",
-                mixBlendMode: "screen",
-              }}
             />
-          </motion.div>
+          </div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
