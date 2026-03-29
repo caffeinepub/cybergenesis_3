@@ -209,22 +209,41 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     return () => clearTimeout(t);
   }, []);
 
-  // Load Leaflet
+  // Load Leaflet + SmoothWheelZoom plugin
   useEffect(() => {
     document.body.style.overflow = "hidden";
+
+    const loadPlugin = () => {
+      if ((window as any).L?.SmoothWheelZoom) {
+        // Plugin already present
+        setIsEngineReady(true);
+        return;
+      }
+      const plugin = document.createElement("script");
+      plugin.src =
+        "https://unpkg.com/leaflet.smoothwheelzoom@1.0.0/dist/SmoothWheelZoom.js";
+      plugin.async = true;
+      plugin.onload = () => setIsEngineReady(true);
+      plugin.onerror = () => setIsEngineReady(true); // graceful fallback
+      document.head.appendChild(plugin);
+    };
+
     if ((window as any).L) {
-      setIsEngineReady(true);
+      // Leaflet already loaded — only load plugin if missing
+      loadPlugin();
     } else {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
+
       const script = document.createElement("script");
       script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
       script.async = true;
-      script.onload = () => setIsEngineReady(true);
+      script.onload = () => loadPlugin();
       document.head.appendChild(script);
     }
+
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -240,17 +259,19 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       maxZoom: 1.0,
       zoomControl: false,
       attributionControl: false,
-      maxBoundsViscosity: 1.0,
+      maxBoundsViscosity: 0.7,
       inertia: true,
-      inertiaDeceleration: 1800,
-      inertiaMaxSpeed: 1500,
-      easeLinearity: 0.25,
+      inertiaDeceleration: 900,
+      inertiaMaxSpeed: 2500,
+      easeLinearity: 0.2,
       zoomAnimation: true,
       zoomAnimationThreshold: 4,
-      wheelPxPerZoomLevel: 60,
+      wheelPxPerZoomLevel: 120,
       zoomSnap: 0,
       zoomDelta: 0.3,
       scrollWheelZoom: false,
+      smoothWheelZoom: true,
+      smoothSensitivity: 1,
       fadeAnimation: false,
     });
 
@@ -298,51 +319,9 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       if (!inspectorOpenRef.current) setPopup(null);
     });
 
-    // GPU hint
-    const perfStyle = document.createElement("style");
-    perfStyle.textContent = `
-      .leaflet-pane { will-change: transform; }
-      .leaflet-zoom-animated { will-change: transform; }
-    `;
-    document.head.appendChild(perfStyle);
-
-    let zoomTarget = map.getZoom();
-    let rafId: number | null = null;
-    let pendingLatlng: ReturnType<typeof map.containerPointToLatLng> | null =
-      null;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 0.3 : -0.3;
-      zoomTarget = Math.max(
-        map.getMinZoom(),
-        Math.min(map.getMaxZoom(), zoomTarget + delta),
-      );
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const containerPoint = L.point(
-        e.clientX - rect.left,
-        e.clientY - rect.top,
-      );
-      pendingLatlng = map.containerPointToLatLng(containerPoint);
-      if (rafId !== null) return; // already scheduled
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (pendingLatlng) {
-          map.setZoomAround(pendingLatlng, zoomTarget, {
-            animate: true,
-            duration: 0.18,
-          });
-        }
-      });
-    };
-    mapContainerRef.current?.addEventListener("wheel", onWheel, {
-      passive: false,
-    });
-
     setIsMapReady(true);
     return () => {
       window.removeEventListener("resize", updateMinZoom);
-      mapContainerRef.current?.removeEventListener("wheel", onWheel);
-      if (rafId !== null) cancelAnimationFrame(rafId);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -595,6 +574,8 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       <style>{`
         .leaflet-container { background:#000 !important; cursor:crosshair; }
         .leaflet-marker-icon,.leaflet-marker-shadow { background:none; border:none; }
+        .leaflet-pane { will-change:transform; backface-visibility:hidden; transform:translateZ(0); }
+        .leaflet-zoom-animated { will-change:transform; }
         .cyber-loader { text-align:center; }
         .loader-text { color:#00ff41; font-family:monospace; font-size:12px; letter-spacing:3px; }
         .loader-bar { width:120px; height:1px; background:#00ff41; margin:10px auto; animation:slide 2s infinite; }

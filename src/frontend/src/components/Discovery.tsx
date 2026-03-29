@@ -180,7 +180,7 @@ export default function Discovery() {
       case 2:
         return {
           rarityLabel: "RARE",
-          color: "text-blue-400",
+          color: "text-[#60baff]",
           glow: "box-glow-cyan",
           borderColor: "border-blue-400/30",
           iconSrc: "/assets/uploads/rare_cache-1.webp",
@@ -190,7 +190,7 @@ export default function Discovery() {
       case 3:
         return {
           rarityLabel: "LEGENDARY",
-          color: "text-[#9933ff]",
+          color: "text-[#bb55ff]",
           glow: "box-glow-purple",
           borderColor: "border-[#9933ff]/30",
           iconSrc: "/assets/uploads/legendary_cache-2.webp",
@@ -362,8 +362,8 @@ export default function Discovery() {
                     tier === 1
                       ? "w-full px-4 py-2 rounded-lg bg-[#00ffff]/15 border border-[#00ffff]/50 text-[#00ffff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#00ffff]/25 hover:border-[#00ffff]/80 hover:shadow-[0_0_14px_rgba(0,255,255,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                       : tier === 2
-                        ? "w-full px-4 py-2 rounded-lg bg-blue-500/15 border border-blue-400/50 text-blue-300 font-bold font-orbitron text-sm transition-all duration-150 hover:bg-blue-500/25 hover:border-blue-400/80 hover:shadow-[0_0_14px_rgba(96,165,250,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        : "w-full px-4 py-2 rounded-lg bg-[#9933ff]/15 border border-[#9933ff]/50 text-[#9933ff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#9933ff]/25 hover:border-[#9933ff]/80 hover:shadow-[0_0_14px_rgba(153,51,255,0.5)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        ? "w-full px-4 py-2 rounded-lg bg-[#3b82f6]/20 border border-[#3b82f6]/70 text-[#60baff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#3b82f6]/35 hover:border-[#3b82f6] hover:shadow-[0_0_16px_rgba(59,130,246,0.7)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        : "w-full px-4 py-2 rounded-lg bg-[#9933ff]/20 border border-[#9933ff]/70 text-[#bb55ff] font-bold font-orbitron text-sm transition-all duration-150 hover:bg-[#9933ff]/35 hover:border-[#9933ff] hover:shadow-[0_0_16px_rgba(153,51,255,0.7)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   }
                   data-ocid={`discovery.discover_cache_button.${tier}`}
                 >

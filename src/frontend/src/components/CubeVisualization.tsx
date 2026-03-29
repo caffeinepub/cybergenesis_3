@@ -154,7 +154,7 @@ const BackgroundSphere = () => {
     uniform float time;
     uniform vec2 resolution;
 
-    #define NUM_OCTAVES 4
+    #define NUM_OCTAVES 6
 
     float random(vec2 pos) {
         return fract(sin(dot(pos.xy, vec2(13.9898, 78.233))) * 43758.5453123);
