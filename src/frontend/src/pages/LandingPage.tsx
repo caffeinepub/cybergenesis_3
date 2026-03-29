@@ -233,17 +233,16 @@ export default function LandingPage() {
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
           {/*
-            Logo — NO opacity animation on the wrapper to avoid creating a
-            stacking context that breaks mix-blend-mode against the page bg.
-            Only y-translation is animated. mix-blend-mode:screen sits on the
-            wrapper div so black pixels in the webp become transparent.
+            Logo wrapper — only y-translation animated, NO opacity/transform
+            properties that create a stacking context and break mix-blend-mode.
+            mix-blend-mode:screen is placed directly on the <img> so black
+            pixels in the webp composite against the actual page background.
           */}
           <motion.div
             initial={{ y: -10 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.5 }}
             className="mb-5 flex justify-center"
-            style={{ mixBlendMode: "screen" }}
           >
             <img
               src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
@@ -252,6 +251,7 @@ export default function LandingPage() {
               style={{
                 filter:
                   "drop-shadow(0 0 18px rgba(168,85,247,0.55)) drop-shadow(0 0 36px rgba(0,255,255,0.25))",
+                mixBlendMode: "screen",
               }}
             />
           </motion.div>
