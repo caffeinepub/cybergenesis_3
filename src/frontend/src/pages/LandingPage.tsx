@@ -232,23 +232,29 @@ export default function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4">
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
-          {/* Plain wrapper div — no filter/backdrop/opacity that could create
-              an isolated compositor layer. The img itself carries background:none
-              and a filter drop-shadow so the webp alpha channel renders cleanly
-              against the page background, matching the same pattern used in
-              Discovery for cache icons. */}
-          <div className="mb-5 flex justify-center">
+          {/*
+            Logo — NO opacity animation on the wrapper to avoid creating a
+            stacking context that breaks mix-blend-mode against the page bg.
+            Only y-translation is animated. mix-blend-mode:screen sits on the
+            wrapper div so black pixels in the webp become transparent.
+          */}
+          <motion.div
+            initial={{ y: -10 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-5 flex justify-center"
+            style={{ mixBlendMode: "screen" }}
+          >
             <img
               src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
               alt="CyberGenesis Logo"
               className="w-28 h-auto sm:w-36 object-contain"
               style={{
-                background: "none",
                 filter:
-                  "drop-shadow(0 0 12px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(0,255,255,0.4))",
+                  "drop-shadow(0 0 18px rgba(168,85,247,0.55)) drop-shadow(0 0 36px rgba(0,255,255,0.25))",
               }}
             />
-          </div>
+          </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
