@@ -201,7 +201,7 @@ export default function LandingPage() {
       className="relative min-h-screen w-full overflow-x-hidden"
       style={{ background: "#070B14" }}
     >
-      {/* Subtle ambient glows — CSS only, no animated components */}
+      {/* Subtle ambient glows */}
       <div
         className="absolute inset-0 pointer-events-none overflow-hidden"
         aria-hidden="true"
@@ -232,11 +232,18 @@ export default function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4">
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
+          {/*
+            Logo — NO opacity animation on the wrapper to avoid creating a
+            stacking context that breaks mix-blend-mode against the page bg.
+            Only y-translation is animated. mix-blend-mode:screen sits on the
+            wrapper div so black pixels in the webp become transparent.
+          */}
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: -10 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.5 }}
             className="mb-5 flex justify-center"
+            style={{ mixBlendMode: "screen" }}
           >
             <img
               src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
