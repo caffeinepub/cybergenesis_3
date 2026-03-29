@@ -166,13 +166,7 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <>
-        <CosmicBackground />
-        <ParticleBackground />
-        <LandingPage />
-      </>
-    );
+    return <LandingPage />;
   }
 
   return (

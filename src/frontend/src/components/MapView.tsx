@@ -271,8 +271,10 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       zoomDelta: 0.3,
       scrollWheelZoom: false,
       smoothWheelZoom: true,
-      smoothSensitivity: 1,
+      smoothSensitivity: 1.5,
       fadeAnimation: false,
+      markerZoomAnimation: false,
+      tap: false,
     });
 
     const bounds: [[number, number], [number, number]] = [
@@ -283,11 +285,15 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     // 1. Background layer (cosmos) — full 6000x6000
     L.imageOverlay("/assets/uploads/map_background.webp", bounds, {
       opacity: 1,
+      updateWhenZooming: false,
     }).addTo(map);
 
     // 2. Regional PNG overlays (with transparency)
     MAP_LAYERS.forEach((layer, idx) => {
-      const overlay = L.imageOverlay(layer.path, layer.bounds, { opacity: 1 });
+      const overlay = L.imageOverlay(layer.path, layer.bounds, {
+        opacity: 1,
+        updateWhenZooming: false,
+      });
       if (idx === MAP_LAYERS.length - 1) {
         overlay.on("load", () => setIsImageLoaded(true));
         overlay.on("error", () => setIsImageLoaded(true));
@@ -593,8 +599,7 @@ const containerStyle: React.CSSProperties = {
   zIndex: 2147483647,
   background: "#000",
   overflow: "hidden",
-  touchAction: "none",
-  isolation: "isolate",
+  touchAction: "pan-x pan-y",
 };
 const loadingOverlayStyle: React.CSSProperties = {
   position: "absolute",
