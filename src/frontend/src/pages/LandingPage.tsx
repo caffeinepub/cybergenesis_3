@@ -232,20 +232,21 @@ export default function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4">
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
-          {/* Logo wrapper uses box-shadow (NOT filter/drop-shadow) so it does NOT
-              create an isolated compositor layer. Native webp alpha transparency
-              works correctly without any mix-blend-mode tricks. */}
-          <div
-            className="mb-5 flex justify-center rounded-xl"
-            style={{
-              boxShadow:
-                "0 0 24px rgba(168,85,247,0.5), 0 0 48px rgba(0,255,255,0.2)",
-            }}
-          >
+          {/* Plain wrapper div — no filter/backdrop/opacity that could create
+              an isolated compositor layer. The img itself carries background:none
+              and a filter drop-shadow so the webp alpha channel renders cleanly
+              against the page background, matching the same pattern used in
+              Discovery for cache icons. */}
+          <div className="mb-5 flex justify-center">
             <img
               src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
               alt="CyberGenesis Logo"
               className="w-28 h-auto sm:w-36 object-contain"
+              style={{
+                background: "none",
+                filter:
+                  "drop-shadow(0 0 12px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(0,255,255,0.4))",
+              }}
             />
           </div>
 
