@@ -548,7 +548,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           width: "100%",
           height: "100%",
           background: "#000",
-          contain: "strict",
         }}
       >
         {/* Popup card */}
