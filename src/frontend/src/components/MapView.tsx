@@ -20,26 +20,10 @@ const BIOME_COLORS: Record<string, string> = {
   ISLAND_ARCHIPELAGO: "#00ffcc",
 };
 
-// BIOME_REGIONS — calibrated from % offsets inside each PNG's bounds
-// x = longitude, y = latitude (Leaflet CRS.Simple)
-//
-// SNOW_PEAK        image [[1800,600],[3200,2000]] lat×lng 1400×1400
-//   xMin0.06→684  xMax0.94→1916  yMin0.08→1912  yMax0.93→3102
-// VOLCANIC_CRAG   image [[1800,3800],[3200,5200]] lat×lng 1400×1400
-//   xMin0.04→3856 xMax0.96→5144  yMin0.14→1996  yMax0.95→3130
-// DESERT_DUNE     image [[3800,4000],[5200,5400]] lat×lng 1400×1400
-//   xMin0.06→4084 xMax0.94→5316  yMin0.14→3996  yMax0.96→5144
-// FOREST_VALLEY   image [[3800,500],[5200,1900]]  lat×lng 1400×1400
-//   xMin0.04→556  xMax0.95→1830  yMin0.10→3940  yMax0.94→5116
-// ISLAND_ARCHIPELAGO image [[4500,2000],[5900,3800]] lat1400×lng1800
-//   xMin0.03→2054 xMax0.97→3746  yMin0.15→4710  yMax0.98→5872
-// MYTHIC          image [[2300,2300],[3700,3700]] lat×lng 1400×1400
-//   xMin0.06→2384 xMax0.95→3630  yMin0.08→2412  yMax0.96→3644
 const BIOME_REGIONS: Record<
   string,
   { x: [number, number]; y: [number, number] }
 > = {
-  // 20% inward offset from each PNG edge to avoid transparent margins
   MYTHIC_VOID: { x: [2580, 3420], y: [2580, 3420] },
   MYTHIC_AETHER: { x: [2580, 3420], y: [2580, 3420] },
   SNOW_PEAK: { x: [880, 1720], y: [2080, 2920] },
@@ -49,7 +33,6 @@ const BIOME_REGIONS: Record<
   ISLAND_ARCHIPELAGO: { x: [2360, 3440], y: [4780, 5620] },
 };
 
-// Image overlays: background + 6 regions
 const MAP_LAYERS = [
   {
     path: "/assets/uploads/map_mythic.webp",
@@ -95,6 +78,15 @@ const MAP_LAYERS = [
   },
 ];
 
+interface BeamData {
+  latlng: [number, number];
+  color: string;
+  isOwner: boolean;
+  landId: number;
+  biome: string;
+  principal: string;
+}
+
 function getPointInBiome(landId: number, biome: string): [number, number] {
   const seed = landId * 1337.42;
   const r = (offset: number) => Math.abs(Math.sin(seed + offset));
@@ -112,58 +104,6 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-function makeBeamIcon(L: any, color: string, isOwner: boolean) {
-  const h = isOwner ? 140 : 90;
-  const coreW = isOwner ? 2 : 1;
-  const glowW = isOwner ? 14 : 5;
-  const blurPx = isOwner ? 2 : 0;
-
-  const effectiveColor = isOwner ? color : "#FAD26A";
-  const [r, g, b] = hexToRgb(effectiveColor);
-
-  const coreShadow = isOwner
-    ? `0 0 3px 1px rgba(${r},${g},${b},1), 0 0 6px 2px rgba(${r},${g},${b},0.6)`
-    : "none";
-
-  const html = `
-    <div style="position:relative;width:${glowW}px;height:${h}px;cursor:pointer;">
-      ${
-        isOwner
-          ? `<div style="
-        position:absolute;
-        left:50%;
-        transform:translateX(-50%);
-        width:${glowW}px;
-        height:${h}px;
-        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.2) 55%,transparent 100%);
-        border-radius:${glowW / 2}px ${glowW / 2}px 2px 2px;
-        filter:blur(${blurPx}px);
-        pointer-events:none;
-      "></div>`
-          : ""
-      }
-      <div style="
-        position:absolute;
-        left:50%;
-        transform:translateX(-50%);
-        width:${coreW}px;
-        height:${h}px;
-        background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5) 0%,rgba(${r},${g},${b},0.9) 100%);
-        border-radius:${coreW / 2}px;
-        box-shadow:${coreShadow};
-        pointer-events:none;
-      "></div>
-    </div>`;
-
-  return L.divIcon({
-    html,
-    className: "",
-    iconSize: [glowW, h],
-    iconAnchor: [glowW / 2, h],
-  });
-}
-
-// Separate inspector data state so closing the popup doesn't break the modal
 interface InspectorData {
   listing: { itemId: bigint; seller: { toString: () => string } };
   landData: { biome: string; attachedModifications: any[] };
@@ -172,20 +112,19 @@ interface InspectorData {
 const MapView = ({ onClose }: { onClose: () => void }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const beamLayerRef = useRef<any>(null);
+  const beamCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const beamDataRef = useRef<BeamData[]>([]);
+  const rafRedrawRef = useRef<number | null>(null);
   const hasZoomedRef = useRef(false);
-  const beamClickedRef = useRef(false);
 
   const [isEngineReady, setIsEngineReady] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isZoomReady, setIsZoomReady] = useState(false);
 
-  // Popup state
   const [popup, setPopup] = useState<BeamPopupData | null>(null);
   const [popupPx, setPopupPx] = useState<{ x: number; y: number } | null>(null);
 
-  // Inspector state — independent from popup so popup close doesn't kill modal
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const inspectorOpenRef = useRef(false);
   const [inspectorData, setInspectorData] = useState<InspectorData | null>(
@@ -203,7 +142,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     enabled: !!actor,
   });
 
-  // Failsafe: mark zoom ready after 6s
   useEffect(() => {
     const t = setTimeout(() => setIsZoomReady(true), 6000);
     return () => clearTimeout(t);
@@ -212,10 +150,8 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   // Load Leaflet + SmoothWheelZoom plugin
   useEffect(() => {
     document.body.style.overflow = "hidden";
-
     const loadPlugin = () => {
       if ((window as any).L?.SmoothWheelZoom) {
-        // Plugin already present
         setIsEngineReady(true);
         return;
       }
@@ -224,30 +160,96 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         "https://unpkg.com/leaflet.smoothwheelzoom@1.0.0/dist/SmoothWheelZoom.js";
       plugin.async = true;
       plugin.onload = () => setIsEngineReady(true);
-      plugin.onerror = () => setIsEngineReady(true); // graceful fallback
+      plugin.onerror = () => setIsEngineReady(true);
       document.head.appendChild(plugin);
     };
-
     if ((window as any).L) {
-      // Leaflet already loaded — only load plugin if missing
       loadPlugin();
     } else {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
-
       const script = document.createElement("script");
       script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
       script.async = true;
       script.onload = () => loadPlugin();
       document.head.appendChild(script);
     }
-
     return () => {
       document.body.style.overflow = "unset";
     };
   }, []);
+
+  // Draw beams on canvas — pure canvas, no DOM markers
+  const drawBeams = useCallback(() => {
+    const canvas = beamCanvasRef.current;
+    const map = mapRef.current;
+    if (!canvas || !map) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (const beam of beamDataRef.current) {
+      const pt = map.latLngToContainerPoint(beam.latlng as any);
+      const x = pt.x;
+      const baseY = pt.y;
+      const h = beam.isOwner ? 140 : 90;
+      const topY = baseY - h;
+      const [r, g, b] = hexToRgb(beam.color);
+
+      if (beam.isOwner) {
+        // Glow halo
+        const glowGrad = ctx.createLinearGradient(x, baseY, x, topY);
+        glowGrad.addColorStop(0, `rgba(${r},${g},${b},0.45)`);
+        glowGrad.addColorStop(0.55, `rgba(${r},${g},${b},0.18)`);
+        glowGrad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x, topY);
+        ctx.strokeStyle = glowGrad;
+        ctx.lineWidth = 13;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        // Core beam
+        const coreGrad = ctx.createLinearGradient(x, baseY, x, topY);
+        coreGrad.addColorStop(0, `rgba(${r},${g},${b},0.5)`);
+        coreGrad.addColorStop(1, `rgba(${r},${g},${b},0.95)`);
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x, topY);
+        ctx.strokeStyle = coreGrad;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else {
+        // Non-owner: thin golden beam
+        const [gr, gg, gb] = hexToRgb("#FAD26A");
+        const grad = ctx.createLinearGradient(x, baseY, x, topY);
+        grad.addColorStop(0, `rgba(${gr},${gg},${gb},0.45)`);
+        grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.88)`);
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x, topY);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+    }
+  }, []);
+
+  const scheduleRedraw = useCallback(() => {
+    if (rafRedrawRef.current !== null) return;
+    rafRedrawRef.current = requestAnimationFrame(() => {
+      rafRedrawRef.current = null;
+      drawBeams();
+    });
+  }, [drawBeams]);
 
   // Init map
   useEffect(() => {
@@ -282,13 +284,11 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       [MAP_SIZE, MAP_SIZE],
     ];
 
-    // 1. Background layer (cosmos) — full 6000x6000
     L.imageOverlay("/assets/uploads/map_background.webp", bounds, {
       opacity: 1,
       updateWhenZooming: false,
     }).addTo(map);
 
-    // 2. Regional PNG overlays (with transparency)
     MAP_LAYERS.forEach((layer, idx) => {
       const overlay = L.imageOverlay(layer.path, layer.bounds, {
         opacity: 1,
@@ -304,7 +304,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     map.setMaxBounds(bounds);
     map.setView([3000, 3000], -1.3, { animate: false });
     mapRef.current = map;
-    beamLayerRef.current = L.layerGroup().addTo(map);
 
     const updateMinZoom = () => {
       const scale = Math.max(
@@ -316,13 +315,36 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     updateMinZoom();
     window.addEventListener("resize", updateMinZoom);
 
-    // Close popup on map click — but only when inspector is closed
-    map.on("click", () => {
-      if (beamClickedRef.current) {
-        beamClickedRef.current = false;
-        return;
+    // Single click handler with beam hit-test
+    map.on("click", (e: any) => {
+      if (inspectorOpenRef.current) return;
+      const containerPt = map.latLngToContainerPoint(e.latlng);
+      let nearest: BeamData | null = null;
+      let minDist = 14; // pixel threshold
+
+      for (const beam of beamDataRef.current) {
+        const beamPt = map.latLngToContainerPoint(beam.latlng as any);
+        const dx = Math.abs(containerPt.x - beamPt.x);
+        const dy = containerPt.y - beamPt.y;
+        const h = beam.isOwner ? 140 : 90;
+        if (dx <= minDist && dy >= -h && dy <= 12) {
+          nearest = beam;
+          minDist = dx;
+        }
       }
-      if (!inspectorOpenRef.current) setPopup(null);
+
+      if (nearest) {
+        const b = nearest;
+        handleBeamClickRef.current?.(
+          e,
+          b.landId,
+          b.biome,
+          b.principal,
+          b.isOwner,
+        );
+      } else {
+        setPopup(null);
+      }
     });
 
     setIsMapReady(true);
@@ -331,12 +353,57 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
-        beamLayerRef.current = null;
       }
     };
   }, [isEngineReady]);
 
-  // Handle beam click — fetch live data, set popup
+  // Setup canvas overlay + redraw on map move
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = mapContainerRef.current;
+    if (!isMapReady || !map || !container) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.style.cssText = [
+      "position:absolute",
+      "top:0",
+      "left:0",
+      "width:100%",
+      "height:100%",
+      "pointer-events:none",
+      "z-index:599",
+    ].join(";");
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    container.appendChild(canvas);
+    beamCanvasRef.current = canvas;
+
+    const onResize = () => {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      scheduleRedraw();
+    };
+
+    map.on("move", scheduleRedraw);
+    map.on("zoomend", scheduleRedraw);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      map.off("move", scheduleRedraw);
+      map.off("zoomend", scheduleRedraw);
+      window.removeEventListener("resize", onResize);
+      canvas.remove();
+      beamCanvasRef.current = null;
+      if (rafRedrawRef.current !== null) {
+        cancelAnimationFrame(rafRedrawRef.current);
+        rafRedrawRef.current = null;
+      }
+    };
+  }, [isMapReady, scheduleRedraw]);
+
+  // Stable ref for handleBeamClick to avoid stale closure in map click handler
+  const handleBeamClickRef = useRef<any>(null);
+
   const handleBeamClick = useCallback(
     async (
       e: any,
@@ -345,16 +412,13 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
       principal: string,
       isOwner: boolean,
     ) => {
-      e.originalEvent?.stopPropagation();
       const map = mapRef.current;
       if (!map) return;
-
       const latlng = e.latlng;
       let modCount = 0;
       let liveBiome = biome;
       let livePrincipal = principal;
       let attachedModifications: any[] = [];
-
       try {
         const result = await actor?.getLandDataById(BigInt(landId));
         if (result && result.__kind__ === "Some") {
@@ -364,8 +428,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           liveBiome = result.value.biome ?? biome;
         }
       } catch (_) {}
-
-      beamClickedRef.current = true;
       setPopup({
         landId,
         biome: liveBiome,
@@ -379,15 +441,18 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     [actor],
   );
 
-  // Recalculate popup pixel position on map move/zoom
-  // Auto-close if beam goes out of the container viewport
+  // Keep ref in sync
+  useEffect(() => {
+    handleBeamClickRef.current = handleBeamClick;
+  }, [handleBeamClick]);
+
+  // Popup pixel position tracking
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !popup) {
       setPopupPx(null);
       return;
     }
-
     let rafId: number | null = null;
     const recalc = () => {
       if (rafId !== null) return;
@@ -397,7 +462,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         const container = mapContainerRef.current;
         const cw = container ? container.clientWidth : window.innerWidth;
         const ch = container ? container.clientHeight : window.innerHeight;
-
         const CLOSE_MARGIN = 40;
         if (
           pt.x < -CLOSE_MARGIN ||
@@ -409,11 +473,9 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           setPopupPx(null);
           return;
         }
-
         setPopupPx({ x: pt.x, y: pt.y });
       });
     };
-
     recalc();
     map.on("move", recalc);
     map.on("zoom", recalc);
@@ -424,72 +486,59 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     };
   }, [popup]);
 
-  // Draw beams
+  // Populate beamDataRef and trigger canvas redraw
   useEffect(() => {
-    const map = mapRef.current;
-    const beamLayer = beamLayerRef.current;
-    if (!isMapReady || !map || !beamLayer || !(window as any).L) return;
+    if (!isMapReady) return;
     if (!myLands && !allLandsPublic) return;
-    const L = (window as any).L;
-    beamLayer.clearLayers();
 
-    const renderedLandIds = new Set<number>();
+    const beams: BeamData[] = [];
+    const renderedIds = new Set<number>();
     let myCoords: [number, number] | null = null;
 
     if (Array.isArray(allLandsPublic)) {
-      try {
-        for (const land of allLandsPublic as any[]) {
-          const id = Number(land.landId);
-          const coords = getPointInBiome(id, land.biome);
-          const isOwner =
-            principalId != null && land.principal?.toString() === principalId;
-          if (isOwner && !myCoords) myCoords = coords;
-          renderedLandIds.add(id);
-          const color = BIOME_COLORS[land.biome] ?? "#8800ff";
-          const marker = L.marker(coords, {
-            icon: makeBeamIcon(L, color, isOwner),
-          });
-          marker.on("click", (e: any) =>
-            handleBeamClick(
-              e,
-              id,
-              land.biome,
-              land.principal?.toString() ?? "",
-              isOwner,
-            ),
-          );
-          marker.addTo(beamLayer);
-        }
-      } catch (e) {
-        console.warn("[MapView] allLandsPublic beam render error:", e);
+      for (const land of allLandsPublic as any[]) {
+        const id = Number(land.landId);
+        const coords = getPointInBiome(id, land.biome);
+        const isOwner =
+          principalId != null && land.principal?.toString() === principalId;
+        if (isOwner && !myCoords) myCoords = coords;
+        renderedIds.add(id);
+        beams.push({
+          latlng: coords,
+          color: BIOME_COLORS[land.biome] ?? "#8800ff",
+          isOwner,
+          landId: id,
+          biome: land.biome,
+          principal: land.principal?.toString() ?? "",
+        });
       }
     }
 
     if (Array.isArray(myLands)) {
-      try {
-        for (const land of myLands as any[]) {
-          const id = Number(land.landId);
-          if (!renderedLandIds.has(id)) {
-            const coords = getPointInBiome(id, land.biome);
-            if (!myCoords) myCoords = coords;
-            const color = BIOME_COLORS[land.biome] ?? "#8800ff";
-            const marker = L.marker(coords, {
-              icon: makeBeamIcon(L, color, true),
-            });
-            marker.on("click", (e: any) =>
-              handleBeamClick(e, id, land.biome, principalId ?? "", true),
-            );
-            marker.addTo(beamLayer);
-          } else if (!myCoords) {
-            myCoords = getPointInBiome(id, land.biome);
-          }
+      for (const land of myLands as any[]) {
+        const id = Number(land.landId);
+        if (!renderedIds.has(id)) {
+          const coords = getPointInBiome(id, land.biome);
+          if (!myCoords) myCoords = coords;
+          beams.push({
+            latlng: coords,
+            color: BIOME_COLORS[land.biome] ?? "#8800ff",
+            isOwner: true,
+            landId: id,
+            biome: land.biome,
+            principal: principalId ?? "",
+          });
+        } else if (!myCoords) {
+          myCoords = getPointInBiome(id, land.biome);
         }
-      } catch (e) {
-        console.warn("[MapView] myLands beam render error:", e);
       }
     }
 
-    if (myCoords && !hasZoomedRef.current) {
+    beamDataRef.current = beams;
+    scheduleRedraw();
+
+    const map = mapRef.current;
+    if (map && myCoords && !hasZoomedRef.current) {
       hasZoomedRef.current = true;
       map.flyTo(myCoords, -0.5, {
         animate: true,
@@ -500,9 +549,8 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     } else if (!myCoords) {
       setIsZoomReady(true);
     }
-  }, [allLandsPublic, myLands, principalId, isMapReady, handleBeamClick]);
+  }, [allLandsPublic, myLands, principalId, isMapReady, scheduleRedraw]);
 
-  // Open inspector — save data independently so popup can be closed without breaking modal
   const handleOpenInspector = useCallback(() => {
     if (!popup) return;
     setInspectorData({
@@ -517,7 +565,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
     });
     inspectorOpenRef.current = true;
     setInspectorOpen(true);
-    // Auto-close popup so it doesn't cover the inspector
     setPopup(null);
     setPopupPx(null);
   }, [popup]);
@@ -525,7 +572,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
   const handleCloseInspector = useCallback(() => {
     inspectorOpenRef.current = false;
     setInspectorOpen(false);
-    // Small delay before clearing data so closing animation finishes
     setTimeout(() => setInspectorData(null), 300);
   }, []);
 
@@ -550,7 +596,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
           background: "#000",
         }}
       >
-        {/* Popup card */}
         {popup && popupPx && (
           <MapBeamPopup
             popup={popup}
@@ -562,7 +607,6 @@ const MapView = ({ onClose }: { onClose: () => void }) => {
         )}
       </div>
 
-      {/* Inspector overlay — rendered inside MapView container, above Leaflet (z-index 500) */}
       {inspectorData && (
         <MapInspectorOverlay
           open={inspectorOpen}

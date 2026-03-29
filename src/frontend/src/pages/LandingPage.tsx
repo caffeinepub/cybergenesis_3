@@ -245,6 +245,7 @@ export default function LandingPage() {
               style={{
                 filter:
                   "drop-shadow(0 0 18px rgba(168,85,247,0.55)) drop-shadow(0 0 36px rgba(0,255,255,0.25))",
+                mixBlendMode: "screen",
               }}
             />
           </motion.div>
