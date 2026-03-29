@@ -600,6 +600,7 @@ const containerStyle: React.CSSProperties = {
   background: "#000",
   overflow: "hidden",
   touchAction: "pan-x pan-y",
+  contain: "strict",
 };
 const loadingOverlayStyle: React.CSSProperties = {
   position: "absolute",

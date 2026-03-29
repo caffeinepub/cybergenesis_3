@@ -233,20 +233,25 @@ export default function LandingPage() {
         {/* ══════════════════════ HERO ══════════════════════ */}
         <section className="pt-12 pb-8 flex flex-col items-center text-center">
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
             className="mb-5 flex justify-center"
           >
-            <img
-              src="/assets/uploads/img_0846-019d3991-0be5-70ad-9d85-314a84b5780c-1.webp"
-              alt="CyberGenesis Logo"
-              className="w-28 h-auto sm:w-36 object-contain"
+            <div
               style={{
-                filter:
-                  "drop-shadow(0 0 18px rgba(168,85,247,0.55)) drop-shadow(0 0 36px rgba(0,255,255,0.25))",
+                boxShadow:
+                  "0 0 24px rgba(168,85,247,0.45), 0 0 48px rgba(0,255,255,0.2)",
+                borderRadius: "12px",
+                display: "inline-block",
               }}
-            />
+            >
+              <img
+                src="/assets/uploads/img_0846-019d3b70-3994-75dc-bdb5-7a56b13109eb-1.webp"
+                alt="CyberGenesis Logo"
+                className="w-28 h-auto sm:w-36 object-contain block"
+              />
+            </div>
           </motion.div>
 
           <motion.h1
