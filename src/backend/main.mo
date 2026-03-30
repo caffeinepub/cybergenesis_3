@@ -167,34 +167,34 @@ actor CyberGenesisLandMint {
     { lat; lon };
   };
 
-  func getChargeRatePerMinute(level : Nat) : Int {
+  func getChargeRatePerHour(level : Nat) : Int {
     switch (level) {
-      case 0 { 100 };
-      case 1 { 200 };
-      case 2 { 300 };
-      case 3 { 400 };
-      case _ { 500 };
+      case 0 { 83 };
+      case 1 { 83 };
+      case 2 { 83 };
+      case 3 { 89 };
+      case _ { 88 };
     };
   };
 
   func getChargeCap(level : Nat) : Nat {
     switch (level) {
       case 0 { 1000 };
-      case 1 { 2000 };
-      case 2 { 3000 };
-      case 3 { 4000 };
-      case _ { 5000 };
+      case 1 { 1500 };
+      case 2 { 2000 };
+      case 3 { 2500 };
+      case _ { 3500 };
     };
   };
 
   func updateCharge(data : LandData) : LandData {
     let currentTime = Time.now();
     let elapsedTime = currentTime - data.lastChargeUpdate;
-    let minutesElapsed = elapsedTime / 60_000_000_000;
-    let chargePerMinute = getChargeRatePerMinute(data.upgradeLevel);
+    let hoursElapsed = elapsedTime / 3_600_000_000_000;
+    let chargePerHour = getChargeRatePerHour(data.upgradeLevel);
     let cap : Int = data.chargeCap;
-    let newCharge = if (data.cycleCharge + minutesElapsed * chargePerMinute > cap) { cap }
-                   else { data.cycleCharge + minutesElapsed * chargePerMinute };
+    let newCharge = if (data.cycleCharge + hoursElapsed * chargePerHour > cap) { cap }
+                   else { data.cycleCharge + hoursElapsed * chargePerHour };
     { data with cycleCharge = newCharge; lastChargeUpdate = currentTime };
   };
 
@@ -604,8 +604,8 @@ actor CyberGenesisLandMint {
     let updatedLand = updateCharge(lands[0]);
     let requiredCharge = switch (tier) {
       case 1 { 200 };
-      case 2 { 500 };
-      case 3 { 1000 };
+      case 2 { 400 };
+      case 3 { 800 };
       case _ { Runtime.trap("Invalid tier: must be 1, 2, or 3") };
     };
     if (updatedLand.cycleCharge < requiredCharge) {
