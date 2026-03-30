@@ -152,6 +152,7 @@ const NAV_ITEMS = [
   { label: "LAND NFT", id: "guide-land" },
   { label: "MODS", id: "guide-mods" },
   { label: "CACHES", id: "guide-caches" },
+  { label: "CRAFTING", id: "guide-crafting" },
   { label: "CBR TOKEN", id: "guide-cbr" },
   { label: "MARKETPLACE", id: "guide-marketplace" },
   { label: "CYBER MAP", id: "guide-map" },
@@ -321,9 +322,10 @@ export default function Guide() {
                 className="font-jetbrains text-sm leading-relaxed mb-4"
                 style={{ color: "rgba(255,255,255,0.7)" }}
               >
-                Each LAND is a unique on-chain plot permanently bound to your
-                Internet Identity principal. There are 7 biomes across 3 rarity
-                tiers — each an independent composable NFT:
+                Each LAND is a unique Composable Collectible on-chain plot
+                permanently bound to your Internet Identity principal. There are
+                7 biomes across 3 rarity tiers — each an independent composable
+                on-chain object:
               </p>
 
               {/* Biome Land Images — with rarity badges */}
@@ -508,6 +510,21 @@ export default function Guide() {
                   same.
                 </p>
               </div>
+              <div className="flex items-start gap-2 px-1 mb-3 mt-3">
+                <span
+                  className="flex-shrink-0 mt-0.5"
+                  style={{ color: "rgba(0,229,255,0.5)", fontSize: "10px" }}
+                >
+                  ◈
+                </span>
+                <p
+                  className="font-jetbrains text-[11px] leading-relaxed"
+                  style={{ color: "rgba(0,229,255,0.6)" }}
+                >
+                  Your land&apos;s position on the Cyber Map is permanently
+                  recorded on-chain — your beam is live blockchain data.
+                </p>
+              </div>
             </div>
           </div>
         </SectionCard>
@@ -542,8 +559,8 @@ export default function Guide() {
                 style={{ color: "rgba(255,255,255,0.7)" }}
               >
                 48 modifiers across 4 rarity tiers + 1 exclusive Keeper per
-                region. Each mod is a real on-chain asset — not metadata.
-                Install up to{" "}
+                region. Each mod is a unique collectible on-chain object — not
+                metadata. Install up to{" "}
                 <span style={{ color: "#ffd060" }}>49 mods per LAND</span>,
                 increasing its staking weight and marketplace value.
               </p>
@@ -580,6 +597,37 @@ export default function Guide() {
                     </span>
                   </div>
                 ))}
+              </div>
+
+              {/* Keeper crafting tip */}
+              <div
+                className="flex items-start gap-3 px-4 py-3 rounded-xl mb-4"
+                style={{
+                  background: "rgba(255,208,96,0.07)",
+                  border: "1px solid rgba(255,208,96,0.25)",
+                }}
+              >
+                <span
+                  style={{
+                    color: "#ffd060",
+                    fontSize: "14px",
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
+                >
+                  ✦
+                </span>
+                <p
+                  className="font-jetbrains text-xs leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
+                  <span style={{ color: "#ffd060", fontWeight: 700 }}>
+                    Keeper (slot 49)
+                  </span>{" "}
+                  is obtained through crafting — region-bound and unique to each
+                  biome. Only one Keeper can be installed per Land, and it must
+                  match the land&apos;s biome.
+                </p>
               </div>
 
               {/* Sample mod cards — ids 15, 30, 37, 42, 47, 48 */}
@@ -777,6 +825,271 @@ export default function Guide() {
                 — keeping the economy sustainable.
               </p>
             </div>
+
+            {/* Energy System */}
+            <div
+              className="mt-5 rounded-xl px-4 py-4"
+              style={{
+                background: "rgba(0,255,136,0.04)",
+                border: "1px solid rgba(0,255,136,0.25)",
+              }}
+            >
+              <p
+                className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                style={{ color: "#00ff88", textShadow: "0 0 8px #00ff8880" }}
+              >
+                ENERGY SYSTEM
+              </p>
+              <p
+                className="font-jetbrains text-sm leading-relaxed mb-3"
+                style={{ color: "rgba(255,255,255,0.65)" }}
+              >
+                Opening caches requires{" "}
+                <span style={{ color: "#00ff88" }}>Energy</span>. Energy
+                accumulates over time — the higher your level (1–5), the larger
+                your energy tank and the less often you need to log in. Higher
+                levels give convenience, not unfair advantage.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {[
+                  { lvl: "Lvl 1", cap: "1000", recharge: "12h" },
+                  { lvl: "Lvl 2", cap: "1500", recharge: "18h" },
+                  { lvl: "Lvl 3", cap: "2000", recharge: "24h" },
+                  { lvl: "Lvl 4", cap: "2500", recharge: "30h" },
+                  { lvl: "Lvl 5", cap: "3500", recharge: "40h" },
+                ].map((e) => (
+                  <div
+                    key={e.lvl}
+                    className="rounded-lg px-3 py-2 flex flex-col items-center gap-0.5"
+                    style={{
+                      background: "rgba(0,255,136,0.06)",
+                      border: "1px solid rgba(0,255,136,0.2)",
+                    }}
+                  >
+                    <p
+                      className="font-orbitron text-[10px] font-bold"
+                      style={{ color: "#00ff88" }}
+                    >
+                      {e.lvl}
+                    </p>
+                    <p
+                      className="font-jetbrains text-[11px]"
+                      style={{ color: "rgba(255,255,255,0.7)" }}
+                    >
+                      {e.cap} cap
+                    </p>
+                    <p
+                      className="font-jetbrains text-[10px]"
+                      style={{ color: "rgba(0,255,136,0.6)" }}
+                    >
+                      {e.recharge}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ── CRAFTING ────────────────────────────────────────────── */}
+        <SectionCard id="guide-crafting" accent="#ff6b35">
+          <div className="px-5 py-5">
+            <SectionTitle
+              title="CRAFTING"
+              subtitle="Crystals · Mods · Keepers"
+              accent="#ff6b35"
+            />
+
+            {/* Coming soon banner */}
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl mb-5"
+              style={{
+                background: "rgba(255,107,53,0.08)",
+                border: "1px solid rgba(255,107,53,0.3)",
+              }}
+            >
+              <span style={{ color: "#ff6b35", fontSize: "18px" }}>✦</span>
+              <div>
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest"
+                  style={{ color: "#ff6b35", textShadow: "0 0 8px #ff6b3580" }}
+                >
+                  COMING SOON
+                </p>
+                <p
+                  className="font-jetbrains text-[11px] mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.5)" }}
+                >
+                  Crafting system launches after initial deployment
+                </p>
+              </div>
+            </div>
+
+            <p
+              className="font-jetbrains text-sm leading-relaxed mb-5"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              The crafting system introduces a{" "}
+              <span style={{ color: "#ff6b35" }}>resource economy layer</span>{" "}
+              on top of caches and the marketplace. Collect crystals from
+              caches, combine them to craft rare Mods and Keepers.
+            </p>
+
+            {/* Two columns: Crystals + What you can craft */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+              {/* Crystals */}
+              <div>
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                  style={{ color: "#ff6b35", textShadow: "0 0 8px #ff6b3580" }}
+                >
+                  CRYSTALS
+                </p>
+                <div className="flex flex-col gap-2">
+                  {[
+                    {
+                      color: "#60a5fa",
+                      name: "AZURE CRYSTAL",
+                      desc: "Common · drops from all caches",
+                    },
+                    {
+                      color: "#a855f7",
+                      name: "VOID CRYSTAL",
+                      desc: "Rare · drops from Rare & Legendary",
+                    },
+                    {
+                      color: "#ffd060",
+                      name: "SOLAR CRYSTAL",
+                      desc: "Legendary · drops from Legendary only",
+                    },
+                    {
+                      color: "#ff6b35",
+                      name: "EMBER CRYSTAL",
+                      desc: "Mythic · ultra-rare drop",
+                    },
+                  ].map((c) => (
+                    <div
+                      key={c.name}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                      style={{
+                        background: `${c.color}0a`,
+                        border: `1px solid ${c.color}30`,
+                      }}
+                    >
+                      <span
+                        className="text-lg flex-shrink-0"
+                        style={{ filter: `drop-shadow(0 0 6px ${c.color}80)` }}
+                      >
+                        ◈
+                      </span>
+                      <div>
+                        <p
+                          className="font-orbitron text-[10px] font-bold"
+                          style={{ color: c.color }}
+                        >
+                          {c.name}
+                        </p>
+                        <p
+                          className="font-jetbrains text-[10px]"
+                          style={{ color: "rgba(255,255,255,0.45)" }}
+                        >
+                          {c.desc}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* What you can craft */}
+              <div>
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                  style={{ color: "#ff6b35", textShadow: "0 0 8px #ff6b3580" }}
+                >
+                  CRAFT RECIPES
+                </p>
+                <div className="flex flex-col gap-2">
+                  {[
+                    {
+                      icon: "⬡",
+                      label: "COMMON MOD",
+                      desc: "Azure Crystal ×3 + Azure Crystal ×1",
+                      rarity: "#4ade80",
+                    },
+                    {
+                      icon: "⬡",
+                      label: "RARE MOD",
+                      desc: "Azure ×5 + Void Crystal ×2",
+                      rarity: "#a855f7",
+                    },
+                    {
+                      icon: "⬡",
+                      label: "LEGENDARY MOD",
+                      desc: "Void ×4 + Solar Crystal ×2",
+                      rarity: "#ffd060",
+                    },
+                    {
+                      icon: "◈",
+                      label: "KEEPER",
+                      desc: "Solar ×3 + Ember Crystal ×1",
+                      rarity: "#ff6b35",
+                    },
+                  ].map((r) => (
+                    <div
+                      key={r.label}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                      style={{
+                        background: "rgba(255,107,53,0.05)",
+                        border: "1px solid rgba(255,107,53,0.2)",
+                      }}
+                    >
+                      <span
+                        className="text-base flex-shrink-0"
+                        style={{
+                          color: r.rarity,
+                          filter: `drop-shadow(0 0 5px ${r.rarity}80)`,
+                        }}
+                      >
+                        {r.icon}
+                      </span>
+                      <div>
+                        <p
+                          className="font-orbitron text-[10px] font-bold"
+                          style={{ color: r.rarity }}
+                        >
+                          {r.label}
+                        </p>
+                        <p
+                          className="font-jetbrains text-[10px]"
+                          style={{ color: "rgba(255,255,255,0.45)" }}
+                        >
+                          {r.desc}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Note */}
+            <div className="flex items-start gap-2 px-1">
+              <span
+                className="flex-shrink-0 mt-0.5"
+                style={{ color: "rgba(255,107,53,0.5)", fontSize: "10px" }}
+              >
+                ✦
+              </span>
+              <p
+                className="font-jetbrains text-[11px] leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.38)" }}
+              >
+                Crystal drop rates, recipe costs, and exact combinations will be
+                finalized at launch. Crystals are found inside caches — higher
+                tier caches drop rarer crystals.
+              </p>
+            </div>
           </div>
         </SectionCard>
 
@@ -934,6 +1247,14 @@ export default function Guide() {
               accent="#60a5fa"
             />
 
+            <p
+              className="font-jetbrains text-xs mb-4"
+              style={{ color: "rgba(96,165,250,0.7)" }}
+            >
+              All listings, trades and ownership transfers are on-chain
+              transactions on Internet Computer — no intermediaries, no servers.
+            </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
               <div>
                 <p
@@ -1083,6 +1404,19 @@ export default function Guide() {
                   Floating island archipelagos drifting in deep space. Seven
                   biomes, each occupying its own region. The MYTHIC region is
                   shared between both Mythic Void and Mythic Aether lands.
+                </p>
+
+                <p
+                  className="font-jetbrains text-xs mb-3 px-3 py-2 rounded-lg"
+                  style={{
+                    color: "rgba(0,229,255,0.7)",
+                    background: "rgba(0,229,255,0.05)",
+                    border: "1px solid rgba(0,229,255,0.2)",
+                  }}
+                >
+                  All beam positions, land ownership, and mod counts shown on
+                  the map are read directly from the on-chain canister in real
+                  time — no servers, no caching.
                 </p>
 
                 {/* Compact region grid */}

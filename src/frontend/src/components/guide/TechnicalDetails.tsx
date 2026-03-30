@@ -79,6 +79,10 @@ export function TechnicalDetails() {
                 term: "Ownership On-Chain",
                 desc: "Your land ownership is cryptographically tied to your Internet Identity principal. No company or developer can transfer, delete, or freeze your assets — ownership is enforced by the protocol itself.",
               },
+              {
+                term: "ICRC-7 NFT Standard",
+                desc: "Land NFTs are planned for ICRC-7 standard — enabling transfers to any ICP wallet and listing on external marketplaces (Entrepot, Yumi). This will allow lands to be traded anywhere in the ICP ecosystem.",
+              },
             ].map(({ term, desc }) => (
               <div key={term}>
                 <p

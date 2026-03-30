@@ -120,6 +120,18 @@ const ECOSYSTEM = [
     desc: "Advisory voting with CBR stake weight. Core decisions remain with developers — community shapes the direction.",
     color: "#a855f7",
   },
+  {
+    icon: "⬡",
+    title: "CYBER MAP",
+    desc: "Interactive on-chain map. Every land has permanent coordinates. Every beam is live blockchain data.",
+    color: "#00e5ff",
+  },
+  {
+    icon: "✦",
+    title: "CRAFTING",
+    desc: "Combine crystals and resources to craft new Mods and Lands. Coming soon.",
+    color: "#ff6b35",
+  },
 ];
 
 function ConnectButton({
@@ -272,7 +284,9 @@ export default function LandingPage() {
             className="font-jetbrains text-sm sm:text-base text-slate-300 max-w-md mb-2"
           >
             Claim your first{" "}
-            <span className="text-cyan-300 font-bold">COMPOSABLE LAND NFT</span>
+            <span className="text-cyan-300 font-bold">
+              COMPOSABLE COLLECTIBLE LAND NFT
+            </span>
             .
           </motion.p>
           <motion.p
@@ -363,6 +377,13 @@ export default function LandingPage() {
                 mod slots. Install characters, protocols, and structures. Your
                 Land evolves.
               </p>
+              <p
+                className="font-jetbrains text-xs mt-1"
+                style={{ color: "rgba(0,229,255,0.6)" }}
+              >
+                All land data, mod slots and ownership — fully on-chain on
+                Internet Computer.
+              </p>
             </div>
           </div>
 
@@ -452,10 +473,12 @@ export default function LandingPage() {
             </div>
             <div className="px-4 py-3">
               <p className="font-jetbrains text-slate-300 text-xs leading-relaxed">
-                Each Modifier is an{" "}
-                <span className="text-purple-300">independent NFT</span> — ICP
-                ecosystem protocols, characters and objects. Install on Land,
-                swap between lands, or sell on the marketplace.
+                Each Modifier is a{" "}
+                <span className="text-purple-300">
+                  unique collectible on-chain object
+                </span>{" "}
+                — ICP ecosystem protocols, characters and objects. Install on
+                Land, swap between lands, or sell on the marketplace.
               </p>
             </div>
           </div>
@@ -550,7 +573,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
             {ECOSYSTEM.map((item, i) => (
               <motion.div
                 key={item.title}

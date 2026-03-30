@@ -1,30 +1,32 @@
-# CyberGenesis Guide — Content & Structure Updates
+# CyberGenesis
 
 ## Current State
-Guide.tsx has LAND NFT section with a BIOMES multiplier table followed by biome land images. MODS section has rarity badges + 7×7 slot grid + tier legend. CACHES section shows 3 cache cards with CBR cost labels only. TechnicalDetails.tsx has 4 basic entries.
+- LandingPage.tsx has outdated text: 'COMPOSABLE LAND NFT' (without Collectible), 'independent NFT' for mods, no on-chain mention in COMPOSABLE LAND NFT section, 4 ecosystem cards (no CYBER MAP, no CRAFTING)
+- Guide.tsx: missing on-chain accent in MAP section, missing ENERGY SYSTEM block in CACHES, missing CRAFTING section, missing ICRC-7 mention in TECHNICAL, 'real on-chain asset' wording for mods, no Keeper crafting tip, no on-chain phrase in MARKETPLACE
 
 ## Requested Changes (Diff)
 
 ### Add
-- Rarity label (Common / Rare / Mythic) on each biome land card in the LAND section
-- Energy cost values to each cache card (Low/Medium/High alongside CBR)
-- Contents description to each cache card (Common: first 3 tiers; Rare: all tiers; Legendary: all tiers including Mythic) + mention boosters and crystals in all
-- 3 new entries in TechnicalDetails: 4 canisters, all data on-chain, ownership on-chain
+- LandingPage ECOSYSTEM: 2 new cards — CYBER MAP and CRAFTING
+- Guide: new CRAFTING section (between CACHES and CBR TOKEN)
+- Guide CACHES: ENERGY SYSTEM info block
+- Guide CYBER MAP: on-chain data sentence
+- Guide MARKETPLACE: on-chain transactions sentence
+- Guide LAND callout: on-chain coordinates phrase
+- Guide MODS: Keeper crafting tip box
+- Guide TECHNICAL: ICRC-7 standard note
 
 ### Modify
-- LAND section: remove BIOMES multiplier table, move biome land images block to where the table was (directly after the intro paragraph), add rarity badge on each land card
-- MODS section: remove the 7x7 grid block and its tier legend below it (keep rarity badges above and sample mod cards)
-- CACHE_TYPES constant: add energyCost and contents fields
-- Cache card rendering: show both CBR cost and energy cost; show contents list
-- TechnicalDetails: add entries for 4 canisters and full on-chain data
+- LandingPage HERO: 'COMPOSABLE LAND NFT' → 'COMPOSABLE COLLECTIBLE LAND NFT'
+- LandingPage COMPOSABLE LAND NFT section: add on-chain sentence
+- LandingPage MODS section: 'independent NFT' → 'unique collectible on-chain object'
+- Guide LAND NFT title/callout: add 'Composable Collectible'
+- Guide MODS: 'real on-chain asset' → 'unique collectible on-chain object'
+- Guide NAV: add CRAFTING item
 
 ### Remove
-- BIOMES multiplier table from LAND section
-- 7×7 grid (GRID_CELLS) block and its tier legend from MODS section
+- Nothing structural removed
 
 ## Implementation Plan
-1. Update CACHE_TYPES constant with energyCost and contents arrays
-2. Remove BIOMES table JSX from LAND section; move biome images block directly after intro paragraph; add rarity badge on each land card
-3. Remove the 7×7 grid block + tier legend from MODS section
-4. Update cache card rendering to show energy cost and contents
-5. Update TechnicalDetails.tsx with 3 new entries about on-chain architecture and 4 canisters
+1. Edit LandingPage.tsx — 4 text changes + 2 new ECOSYSTEM cards
+2. Edit Guide.tsx — 7 text changes + new CRAFTING section + update NAV_ITEMS
