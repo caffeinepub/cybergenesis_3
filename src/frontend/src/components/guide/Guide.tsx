@@ -5,21 +5,6 @@ import { TechnicalDetails } from "./TechnicalDetails";
 
 // ─── Constants ────────────────────────────────────────────────────────────────────────────────────
 
-const BIOMES = [
-  { name: "Forest Valley", tier: "Common", mult: "×1.0", color: "#4ade80" },
-  {
-    name: "Island Archipelago",
-    tier: "Common",
-    mult: "×1.0",
-    color: "#22d3ee",
-  },
-  { name: "Snow Peak", tier: "Rare", mult: "×1.2", color: "#60a5fa" },
-  { name: "Desert Dune", tier: "Rare", mult: "×1.2", color: "#f59e0b" },
-  { name: "Volcanic Crag", tier: "Rare", mult: "×1.2", color: "#f87171" },
-  { name: "Mythic Void", tier: "Mythic", mult: "×1.5", color: "#a855f7" },
-  { name: "Mythic Aether", tier: "Mythic", mult: "×1.5", color: "#cc44ff" },
-];
-
 // Correct tier structure: Common / Rare / Legendary / Mythic / Keeper
 const RARITY_BADGES = [
   { label: "Common", color: "#9CA3AF", slots: "Slots 1–15 · 15 mods" },
@@ -27,31 +12,6 @@ const RARITY_BADGES = [
   { label: "Legendary", color: "#A855F7", slots: "Slots 31–42 · 12 mods" },
   { label: "Mythic", color: "#FACC15", slots: "Slots 43–48 · 6 mods" },
   { label: "Keeper", color: "#cc44ff", slots: "Slot 49 · Region-bound" },
-];
-
-// Full 49-slot grid: all slots colored by their tier
-const GRID_CELLS = [
-  ...Array.from({ length: 15 }, (_, i) => ({
-    key: `c${i}`,
-    color: "#9CA3AF",
-    tier: 1,
-  })),
-  ...Array.from({ length: 15 }, (_, i) => ({
-    key: `r${i}`,
-    color: "#60A5FA",
-    tier: 2,
-  })),
-  ...Array.from({ length: 12 }, (_, i) => ({
-    key: `l${i}`,
-    color: "#A855F7",
-    tier: 3,
-  })),
-  ...Array.from({ length: 6 }, (_, i) => ({
-    key: `m${i}`,
-    color: "#FACC15",
-    tier: 4,
-  })),
-  { key: "keeper", color: "#cc44ff", tier: 5 },
 ];
 
 const MOD_BASE =
@@ -97,21 +57,46 @@ const CACHE_TYPES = [
     img: "/assets/uploads/common_cache-3.webp",
     label: "COMMON CACHE",
     cost: "CBR cost: Low",
-    reward: "Common mods",
+    energyCost: "Energy cost: Low",
+    reward: "Common · Rare · Legendary mods",
+    contents: [
+      "Common mods",
+      "Rare mods",
+      "Legendary mods",
+      "Boosters",
+      "Crystals",
+    ],
     glowColor: "#9CA3AF",
   },
   {
     img: "/assets/uploads/rare_cache-1.webp",
     label: "RARE CACHE",
     cost: "CBR cost: Medium",
-    reward: "Common & Rare mods",
+    energyCost: "Energy cost: Medium",
+    reward: "All mod tiers",
+    contents: [
+      "Common mods",
+      "Rare mods",
+      "Legendary mods",
+      "Mythic mods",
+      "Boosters",
+      "Crystals",
+    ],
     glowColor: "#60a5fa",
   },
   {
     img: "/assets/uploads/legendary_cache-2.webp",
     label: "LEGENDARY CACHE",
     cost: "CBR cost: High",
-    reward: "Rare, Legendary & Mythic mods",
+    energyCost: "Energy cost: High",
+    reward: "All tiers incl. Mythic",
+    contents: [
+      "All mod tiers",
+      "Mythic mods",
+      "Legendary mods",
+      "Boosters",
+      "Crystals",
+    ],
     glowColor: "#FACC15",
   },
 ];
@@ -338,58 +323,133 @@ export default function Guide() {
               >
                 Each LAND is a unique on-chain plot permanently bound to your
                 Internet Identity principal. There are 7 biomes across 3 rarity
-                tiers — each with its own staking multiplier:
+                tiers — each an independent composable NFT:
               </p>
 
-              {/* Biome table — full width, equal padding */}
-              <div className="flex flex-col gap-1 mb-5">
-                {BIOMES.map((b) => (
-                  <div
-                    key={b.name}
-                    className="flex items-center gap-3 py-1.5 px-3 rounded-lg"
-                    style={{
-                      background: `${b.color}08`,
-                      border: `1px solid ${b.color}20`,
-                    }}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
+              {/* Biome Land Images — with rarity badges */}
+              <div className="mb-5">
+                <p
+                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
+                  style={{ color: "#00ffcc", textShadow: "0 0 8px #00ffcc80" }}
+                >
+                  THE SEVEN LANDS
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {[
+                    {
+                      biome: "FOREST_VALLEY",
+                      label: "Forest Valley",
+                      rarity: "Common",
+                      color: "#4ade80",
+                      img: "/assets/uploads/land_forest_valley.webp",
+                    },
+                    {
+                      biome: "ISLAND_ARCHIPELAGO",
+                      label: "Island Archipelago",
+                      rarity: "Common",
+                      color: "#22d3ee",
+                      img: "/assets/uploads/land_island_archipelago.webp",
+                    },
+                    {
+                      biome: "SNOW_PEAK",
+                      label: "Snow Peak",
+                      rarity: "Rare",
+                      color: "#60a5fa",
+                      img: "/assets/uploads/land_snow_peak.webp",
+                    },
+                    {
+                      biome: "DESERT_DUNE",
+                      label: "Desert Dune",
+                      rarity: "Rare",
+                      color: "#f59e0b",
+                      img: "/assets/uploads/land_desert_dune.webp",
+                    },
+                    {
+                      biome: "VOLCANIC_CRAG",
+                      label: "Volcanic Crag",
+                      rarity: "Rare",
+                      color: "#f87171",
+                      img: "/assets/uploads/land_volcanic_crag.webp",
+                    },
+                    {
+                      biome: "MYTHIC_VOID",
+                      label: "Mythic Void",
+                      rarity: "Mythic",
+                      color: "#a855f7",
+                      img: "/assets/uploads/land_mythic_void.webp",
+                    },
+                    {
+                      biome: "MYTHIC_AETHER",
+                      label: "Mythic Aether",
+                      rarity: "Mythic",
+                      color: "#cc44ff",
+                      img: "/assets/uploads/land_mythic_aether.webp",
+                    },
+                  ].map((b) => (
+                    <button
+                      type="button"
+                      key={b.biome}
+                      onClick={() =>
+                        setGuideModal({
+                          img: b.img,
+                          label: b.label,
+                          color: b.color,
+                        })
+                      }
+                      className="flex flex-col items-center gap-1 rounded-xl p-2 text-left"
                       style={{
-                        background: b.color,
-                        boxShadow: `0 0 6px ${b.color}`,
+                        background: `${b.color}0a`,
+                        border: `1px solid ${b.color}40`,
+                        boxShadow: `0 0 8px ${b.color}15`,
+                        cursor: "pointer",
+                        transition: "transform 0.2s",
                       }}
-                    />
-                    <span
-                      className="font-jetbrains text-xs flex-1 min-w-0"
-                      style={{ color: b.color }}
-                    >
-                      {b.name}
-                    </span>
-                    <span
-                      className="font-jetbrains text-[10px] px-2 py-0.5 rounded flex-shrink-0"
-                      style={{
-                        background: `${b.color}18`,
-                        color: b.color,
-                        border: `1px solid ${b.color}30`,
-                        minWidth: "64px",
-                        textAlign: "left",
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
-                      {b.tier}
-                    </span>
-                    <span
-                      className="font-orbitron text-xs font-bold flex-shrink-0"
-                      style={{
-                        color: b.color,
-                        textShadow: `0 0 8px ${b.color}80`,
-                        minWidth: "36px",
-                        textAlign: "right",
-                      }}
-                    >
-                      {b.mult}
-                    </span>
-                  </div>
-                ))}
+                      <div
+                        className="rounded-lg overflow-hidden"
+                        style={{
+                          width: "52px",
+                          height: "52px",
+                          border: `1px solid ${b.color}60`,
+                          boxShadow: `0 0 10px ${b.color}40`,
+                          background: "rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        <img
+                          src={b.img}
+                          alt={b.label}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="font-jetbrains text-[8px] text-center leading-tight"
+                        style={{ color: b.color }}
+                      >
+                        {b.label}
+                      </span>
+                      <span
+                        className="font-orbitron text-[7px] font-bold tracking-wider px-1.5 py-0.5 rounded-full"
+                        style={{
+                          color: b.color,
+                          border: `1px solid ${b.color}60`,
+                          background: `${b.color}18`,
+                        }}
+                      >
+                        {b.rarity}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Composable callout */}
@@ -447,115 +507,6 @@ export default function Guide() {
                   and coordinates are pure chance. No two players start the
                   same.
                 </p>
-              </div>
-
-              {/* Biome Land Images */}
-              <div className="mt-4">
-                <p
-                  className="font-orbitron text-xs font-bold tracking-widest mb-3"
-                  style={{ color: "#00ffcc", textShadow: "0 0 8px #00ffcc80" }}
-                >
-                  THE SEVEN LANDS
-                </p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {[
-                    {
-                      biome: "FOREST_VALLEY",
-                      label: "Forest Valley",
-                      color: "#4ade80",
-                      img: "/assets/uploads/land_forest_valley.webp",
-                    },
-                    {
-                      biome: "ISLAND_ARCHIPELAGO",
-                      label: "Island Archipelago",
-                      color: "#00ffcc",
-                      img: "/assets/uploads/land_island_archipelago.webp",
-                    },
-                    {
-                      biome: "SNOW_PEAK",
-                      label: "Snow Peak",
-                      color: "#60a5fa",
-                      img: "/assets/uploads/land_snow_peak.webp",
-                    },
-                    {
-                      biome: "DESERT_DUNE",
-                      label: "Desert Dune",
-                      color: "#f59e0b",
-                      img: "/assets/uploads/land_desert_dune.webp",
-                    },
-                    {
-                      biome: "VOLCANIC_CRAG",
-                      label: "Volcanic Crag",
-                      color: "#f87171",
-                      img: "/assets/uploads/land_volcanic_crag.webp",
-                    },
-                    {
-                      biome: "MYTHIC_VOID",
-                      label: "Mythic Void",
-                      color: "#cc44ff",
-                      img: "/assets/uploads/land_mythic_void.webp",
-                    },
-                    {
-                      biome: "MYTHIC_AETHER",
-                      label: "Mythic Aether",
-                      color: "#a855f7",
-                      img: "/assets/uploads/land_mythic_aether.webp",
-                    },
-                  ].map((b) => (
-                    <button
-                      type="button"
-                      key={b.biome}
-                      onClick={() =>
-                        setGuideModal({
-                          img: b.img,
-                          label: b.label,
-                          color: b.color,
-                        })
-                      }
-                      className="flex flex-col items-center gap-1 rounded-xl p-2 text-left"
-                      style={{
-                        background: `${b.color}0a`,
-                        border: `1px solid ${b.color}40`,
-                        boxShadow: `0 0 8px ${b.color}15`,
-                        cursor: "pointer",
-                        transition: "transform 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "scale(1.04)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "scale(1)";
-                      }}
-                    >
-                      <div
-                        className="rounded-lg overflow-hidden"
-                        style={{
-                          width: "52px",
-                          height: "52px",
-                          border: `1px solid ${b.color}60`,
-                          boxShadow: `0 0 10px ${b.color}40`,
-                          background: "rgba(0,0,0,0.3)",
-                        }}
-                      >
-                        <img
-                          src={b.img}
-                          alt={b.label}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-                      <span
-                        className="font-jetbrains text-[8px] text-center leading-tight"
-                        style={{ color: b.color }}
-                      >
-                        {b.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -629,60 +580,6 @@ export default function Guide() {
                     </span>
                   </div>
                 ))}
-              </div>
-
-              {/* 7×7 grid — all 49 slots colored by tier */}
-              <div className="mb-5">
-                <p
-                  className="font-orbitron text-[10px] tracking-widest mb-2"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
-                >
-                  MOD SLOTS — 49 per LAND
-                </p>
-                <div
-                  className="grid gap-1"
-                  style={{ gridTemplateColumns: "repeat(7, 28px)" }}
-                >
-                  {GRID_CELLS.map((cell) => (
-                    <div
-                      key={cell.key}
-                      className="rounded-sm"
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        background: `${cell.color}28`,
-                        border: `1px solid ${cell.color}60`,
-                        boxShadow:
-                          cell.tier >= 4 ? `0 0 5px ${cell.color}60` : "none",
-                      }}
-                    />
-                  ))}
-                </div>
-                {/* Tier legend */}
-                <div className="flex flex-wrap gap-3 mt-2">
-                  {RARITY_BADGES.map((r) => (
-                    <div key={r.label} className="flex items-center gap-1">
-                      <div
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: 2,
-                          background: `${r.color}28`,
-                          border: `1px solid ${r.color}60`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontFamily: "monospace",
-                          color: r.color,
-                        }}
-                      >
-                        {r.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* Sample mod cards — ids 15, 30, 37, 42, 47, 48 */}
@@ -829,11 +726,37 @@ export default function Guide() {
                       {c.cost}
                     </p>
                     <p
-                      className="font-jetbrains text-xs"
+                      className="font-jetbrains text-xs mb-0.5"
+                      style={{ color: "rgba(0,255,136,0.6)" }}
+                    >
+                      {c.energyCost}
+                    </p>
+                    <p
+                      className="font-jetbrains text-xs mb-2"
                       style={{ color: "rgba(255,255,255,0.35)" }}
                     >
                       {c.reward}
                     </p>
+                    <p
+                      className="font-orbitron text-[9px] mb-1"
+                      style={{ color: "rgba(255,255,255,0.25)" }}
+                    >
+                      CONTAINS:
+                    </p>
+                    <ul className="flex flex-col gap-0.5">
+                      {c.contents.map((item: string) => (
+                        <li
+                          key={item}
+                          className="font-jetbrains text-[9px] flex items-center gap-1"
+                          style={{ color: "rgba(255,255,255,0.5)" }}
+                        >
+                          <span style={{ color: c.glowColor, fontSize: "7px" }}>
+                            •
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               ))}

@@ -67,6 +67,18 @@ export function TechnicalDetails() {
                 term: "Why on-chain?",
                 desc: "All ownership, trades, and governance actions are transparent, trustless, and permanent. Nobody — not even the developers — can alter your ownership records.",
               },
+              {
+                term: "4 Canisters",
+                desc: "CyberGenesis runs on 4 independent canisters: the main game logic (lands, mods, caches), the CBR token (ICRC-1), the marketplace, and governance. Each is an autonomous on-chain program with no central server.",
+              },
+              {
+                term: "All Data On-Chain",
+                desc: "Every land, every modifier slot, every ownership record and marketplace listing is stored directly on the Internet Computer blockchain. No databases, no cloud storage — data lives in canister memory, replicated across nodes.",
+              },
+              {
+                term: "Ownership On-Chain",
+                desc: "Your land ownership is cryptographically tied to your Internet Identity principal. No company or developer can transfer, delete, or freeze your assets — ownership is enforced by the protocol itself.",
+              },
             ].map(({ term, desc }) => (
               <div key={term}>
                 <p

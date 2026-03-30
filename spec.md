@@ -1,40 +1,30 @@
-# CyberGenesis Marketplace Refactor
+# CyberGenesis Guide — Content & Structure Updates
 
 ## Current State
-- `src/frontend/src/components/Marketplace.tsx` — монолит 1972 строки, содержит все субкомпоненты инлайн
-- `src/frontend/src/hooks/useQueries.ts` — `useGetAllActiveListings` имеет `refetchOnWindowFocus: true`
-- `src/frontend/src/hooks/useMarketplaceActor.ts` — нет 8-секундного fallback, UI может висеть бесконечно пока идёт retry
-- В маркетплейсе контент рендерится условно по activeTab (вызывает React Query re-trigger при переключении)
+Guide.tsx has LAND NFT section with a BIOMES multiplier table followed by biome land images. MODS section has rarity badges + 7×7 slot grid + tier legend. CACHES section shows 3 cache cards with CBR cost labels only. TechnicalDetails.tsx has 4 basic entries.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Папка `src/frontend/src/components/marketplace/` со следующими файлами:
-  - `MarketplaceTypes.ts` — все типы, интерфейсы, константы, хелперы
-  - `FilterDrawer.tsx` — компонент FilterDrawer
-  - `InspectorModal.tsx` — компонент InspectorModal (7x7 grid)
-  - `LandCard.tsx` — компонент LandCard
-  - `ModCard.tsx` — компонент ModCard
-  - `CreateListingModal.tsx` — компонент CreateListingModal
-  - `Marketplace.tsx` — корневой компонент (хуки, стейт, хендлеры, рендер)
+- Rarity label (Common / Rare / Mythic) on each biome land card in the LAND section
+- Energy cost values to each cache card (Low/Medium/High alongside CBR)
+- Contents description to each cache card (Common: first 3 tiers; Rare: all tiers; Legendary: all tiers including Mythic) + mention boosters and crystals in all
+- 3 new entries in TechnicalDetails: 4 canisters, all data on-chain, ownership on-chain
 
 ### Modify
-- `src/frontend/src/components/Marketplace.tsx` → заменить на re-export из `./marketplace/Marketplace`
-- `src/frontend/src/hooks/useQueries.ts` → Fix 1: refetchOnWindowFocus: false
-- `src/frontend/src/hooks/useMarketplaceActor.ts` → Fix 2: 8-секундный fallback
-- `src/frontend/src/components/marketplace/Marketplace.tsx` → Fix 3: CSS display вместо условного рендера, Fix 4: убрать key на activeTab
+- LAND section: remove BIOMES multiplier table, move biome land images block to where the table was (directly after the intro paragraph), add rarity badge on each land card
+- MODS section: remove the 7x7 grid block and its tier legend below it (keep rarity badges above and sample mod cards)
+- CACHE_TYPES constant: add energyCost and contents fields
+- Cache card rendering: show both CBR cost and energy cost; show contents list
+- TechnicalDetails: add entries for 4 canisters and full on-chain data
 
 ### Remove
-- Весь инлайн код субкомпонентов из старого Marketplace.tsx (переносится в отдельные файлы)
+- BIOMES multiplier table from LAND section
+- 7×7 grid (GRID_CELLS) block and its tier legend from MODS section
 
 ## Implementation Plan
-1. Создать MarketplaceTypes.ts с экспортом всех типов, констант, хелперов из оригинала
-2. Создать FilterDrawer.tsx с компонентом 1:1
-3. Создать InspectorModal.tsx с компонентом 1:1
-4. Создать LandCard.tsx с компонентом 1:1
-5. Создать ModCard.tsx с компонентом 1:1
-6. Создать CreateListingModal.tsx с компонентом 1:1
-7. Создать marketplace/Marketplace.tsx — только корневой компонент, с Fix 3 (CSS display) и Fix 4 (нет key на activeTab)
-8. Заменить src/components/Marketplace.tsx на re-export
-9. Fix 1 в useQueries.ts: refetchOnWindowFocus: true → false
-10. Fix 2 в useMarketplaceActor.ts: 8-секундный setTimeout fallback
+1. Update CACHE_TYPES constant with energyCost and contents arrays
+2. Remove BIOMES table JSX from LAND section; move biome images block directly after intro paragraph; add rarity badge on each land card
+3. Remove the 7×7 grid block + tier legend from MODS section
+4. Update cache card rendering to show energy cost and contents
+5. Update TechnicalDetails.tsx with 3 new entries about on-chain architecture and 4 canisters
