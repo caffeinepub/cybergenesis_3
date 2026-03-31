@@ -1,5 +1,7 @@
 import type { LandData } from "@/backend";
+import type { BoosterKind, FullInventory } from "@/cacheTypes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useActor } from "@/hooks/useActor";
 import {
   useApplyModifier,
   useClaimRewards,
@@ -11,6 +13,7 @@ import {
 } from "@/hooks/useQueries";
 import { useTokenActor } from "@/hooks/useTokenActor";
 import { formatTokenBalance } from "@/lib/tokenUtils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BatteryCharging,
   ChevronLeft,
@@ -33,7 +36,7 @@ interface LandDashboardProps {
   onSelectLand: (index: number) => void;
 }
 
-const CHARGE_RATES_BY_LEVEL = [100, 200, 300, 400, 500];
+const CHARGE_RATES_BY_LEVEL = [83, 83, 83, 89, 88]; // per hour
 
 const RARITY_NAMES: Record<string, string> = {
   "1": "Common",
@@ -78,6 +81,20 @@ export default function LandDashboard({
   const { data: modifierInventory, isLoading: inventoryLoading } =
     useGetModifierInventory();
   const { isFetching: tokenIsFetching } = useTokenActor();
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  const { data: fullInventory, refetch: refetchInventory } = useQuery({
+    queryKey: ["fullInventory"],
+    queryFn: async () => {
+      if (!actor) return null;
+      return (await (actor as any).getFullInventory()) as FullInventory;
+    },
+    enabled: !!actor,
+    refetchOnWindowFocus: false,
+    retry: 0,
+  });
+
   const claimRewardsMutation = useClaimRewards();
   const upgradePlotMutation = useUpgradePlot();
   const applyModifierMutation = useApplyModifier();
@@ -88,6 +105,19 @@ export default function LandDashboard({
   );
   const [isCooldownActive, setIsCooldownActive] = useState(false);
   const [liveCharge, setLiveCharge] = useState(0);
+
+  const handleUseBooster = async (kind: BoosterKind) => {
+    if (!actor) return;
+    try {
+      // biome-ignore lint/correctness/useHookAtTopLevel: actor.useBooster is not a React hook
+      await (actor as any).useBooster(kind);
+      toast.success("Booster used! Energy restored.");
+      refetchInventory();
+      queryClient.invalidateQueries({ queryKey: ["landData"] });
+    } catch (error: any) {
+      toast.error(`Booster error: ${error.message || "Unknown error"}`);
+    }
+  };
 
   const totalLands = lands?.length ?? 1;
   const handlePrev = () =>
@@ -126,9 +156,9 @@ export default function LandDashboard({
     const update = () => {
       const nowMs = Date.now();
       const lastMs = Number(selectedLand.lastChargeUpdate) / 1_000_000;
-      const elapsedMin = Math.max(0, (nowMs - lastMs) / 60_000);
+      const elapsedHrs = Math.max(0, (nowMs - lastMs) / 3_600_000);
       const estimated = Math.min(
-        Number(selectedLand.cycleCharge) + Math.floor(elapsedMin * rate),
+        Number(selectedLand.cycleCharge) + Math.floor(elapsedHrs * rate),
         cap,
       );
       setLiveCharge(Math.max(0, estimated));
@@ -384,7 +414,7 @@ export default function LandDashboard({
               <BatteryCharging className="w-3 h-3 text-[#00ff41]" />
               Charge{" "}
               <span className="text-[#00ff41]/60 text-[9px]">
-                (+{chargeRate}/min)
+                (+{chargeRate}/hr)
               </span>
             </p>
             <p className="text-[#00ff41] font-medium font-jetbrains font-bold">
@@ -705,13 +735,104 @@ export default function LandDashboard({
           <p className="text-[#00ffff]/50 text-xs font-jetbrains uppercase tracking-wider mb-3">
             Energy Boosters
           </p>
-          <div className="max-h-64 overflow-y-auto pr-1">
-            <p
-              className="text-white/50 text-center py-4 font-jetbrains"
-              data-ocid="boosters.empty_state"
-            >
-              No boosters. Open caches!
-            </p>
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {!fullInventory || fullInventory.boosters.length === 0 ? (
+              <p
+                className="text-white/50 text-center py-4 font-jetbrains"
+                data-ocid="boosters.empty_state"
+              >
+                No boosters. Open caches!
+              </p>
+            ) : (
+              (() => {
+                const boosterConfig = [
+                  {
+                    kind: { __kind__: "B250" } as BoosterKind,
+                    label: "+250 Energy",
+                    color: "text-green-400",
+                    border: "border-green-400/30",
+                    bg: "bg-green-400/10",
+                    glow: "hover:shadow-[0_0_12px_rgba(74,222,128,0.4)]",
+                    btnBorder: "border-green-400/50",
+                    btnBg: "bg-green-400/15",
+                    btnHover:
+                      "hover:bg-green-400/25 hover:border-green-400/80 hover:shadow-[0_0_10px_rgba(74,222,128,0.5)]",
+                  },
+                  {
+                    kind: { __kind__: "B500" } as BoosterKind,
+                    label: "+500 Energy",
+                    color: "text-blue-400",
+                    border: "border-blue-400/30",
+                    bg: "bg-blue-400/10",
+                    glow: "hover:shadow-[0_0_12px_rgba(96,165,250,0.4)]",
+                    btnBorder: "border-blue-400/50",
+                    btnBg: "bg-blue-400/15",
+                    btnHover:
+                      "hover:bg-blue-400/25 hover:border-blue-400/80 hover:shadow-[0_0_10px_rgba(96,165,250,0.5)]",
+                  },
+                  {
+                    kind: { __kind__: "B1000" } as BoosterKind,
+                    label: "+1000 Energy",
+                    color: "text-purple-400",
+                    border: "border-purple-400/30",
+                    bg: "bg-purple-400/10",
+                    glow: "hover:shadow-[0_0_12px_rgba(168,85,247,0.4)]",
+                    btnBorder: "border-purple-400/50",
+                    btnBg: "bg-purple-400/15",
+                    btnHover:
+                      "hover:bg-purple-400/25 hover:border-purple-400/80 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]",
+                  },
+                ];
+                return boosterConfig
+                  .map((cfg) => {
+                    const entry = fullInventory.boosters.find(
+                      (b) => b.kind.__kind__ === cfg.kind.__kind__,
+                    );
+                    if (!entry || Number(entry.quantity) === 0) return null;
+                    const qty = Number(entry.quantity);
+                    return (
+                      <div
+                        key={cfg.kind.__kind__}
+                        className={`glassmorphism rounded-lg p-3 border ${cfg.border} flex items-center gap-3 transition-all duration-150 ${cfg.glow}`}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center flex-shrink-0`}
+                        >
+                          <Zap className={`w-5 h-5 ${cfg.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`text-sm font-jetbrains font-medium ${cfg.color}`}
+                            >
+                              {cfg.label}
+                            </p>
+                            {qty >= 2 && (
+                              <span
+                                className={`text-[10px] font-jetbrains ${cfg.color} ${cfg.bg} border ${cfg.border} px-1.5 py-0.5 rounded flex-shrink-0 font-bold`}
+                              >
+                                ×{qty}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-white/40 text-xs font-jetbrains">
+                            Instant energy refill
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUseBooster(cfg.kind)}
+                          className={`px-3 py-1.5 rounded-lg ${cfg.btnBg} border ${cfg.btnBorder} ${cfg.color} text-xs font-orbitron font-bold transition-all duration-150 ${cfg.btnHover} active:scale-95`}
+                          data-ocid={`boosters.${cfg.kind.__kind__}.button`}
+                        >
+                          USE
+                        </button>
+                      </div>
+                    );
+                  })
+                  .filter(Boolean);
+              })()
+            )}
           </div>
         </CardContent>
       </Card>
@@ -726,12 +847,151 @@ export default function LandDashboard({
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            <p
-              className="text-white/50 text-center py-4 font-jetbrains"
-              data-ocid="crystals.empty_state"
-            >
-              No crystals. Open caches!
-            </p>
+            {!fullInventory ||
+            (fullInventory.crystals.length === 0 &&
+              fullInventory.keeperHearts.length === 0) ? (
+              <p
+                className="text-white/50 text-center py-4 font-jetbrains"
+                data-ocid="crystals.empty_state"
+              >
+                No crystals. Open caches!
+              </p>
+            ) : (
+              <>
+                {(() => {
+                  const crystalConfig = [
+                    {
+                      kind: "Burnite",
+                      t1Label: "Burnite Fragment",
+                      t2Label: "Burnite Core",
+                      color: "text-amber-400",
+                      border: "border-amber-400/30",
+                      bg: "bg-amber-400/10",
+                    },
+                    {
+                      kind: "Synthex",
+                      t1Label: "Synthex Fragment",
+                      t2Label: "Synthex Core",
+                      color: "text-emerald-400",
+                      border: "border-emerald-400/30",
+                      bg: "bg-emerald-400/10",
+                    },
+                    {
+                      kind: "Cryonix",
+                      t1Label: "Cryonix Fragment",
+                      t2Label: "Cryonix Core",
+                      color: "text-cyan-400",
+                      border: "border-cyan-400/30",
+                      bg: "bg-cyan-400/10",
+                    },
+                  ];
+                  return crystalConfig.flatMap((cfg) =>
+                    ["T1", "T2"]
+                      .map((tier) => {
+                        const entry = fullInventory?.crystals.find(
+                          (c) =>
+                            c.kind.__kind__ === cfg.kind &&
+                            c.tier.__kind__ === tier,
+                        );
+                        if (!entry || Number(entry.quantity) === 0) return null;
+                        const qty = Number(entry.quantity);
+                        const label = tier === "T1" ? cfg.t1Label : cfg.t2Label;
+                        const tierBadge = tier === "T1" ? "FRAGMENT" : "CORE";
+                        return (
+                          <div
+                            key={`${cfg.kind}_${tier}`}
+                            className={`glassmorphism rounded-lg p-3 border ${cfg.border} flex items-center gap-3`}
+                          >
+                            <div
+                              className={`w-10 h-10 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center flex-shrink-0`}
+                            >
+                              <Gem className={`w-5 h-5 ${cfg.color}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className={`text-sm font-jetbrains font-medium ${cfg.color}`}
+                                >
+                                  {label}
+                                </p>
+                                {qty >= 2 && (
+                                  <span
+                                    className={`text-[10px] font-jetbrains ${cfg.color} ${cfg.bg} border ${cfg.border} px-1.5 py-0.5 rounded flex-shrink-0 font-bold`}
+                                  >
+                                    ×{qty}
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`text-[10px] font-orbitron ${cfg.color} opacity-60 uppercase tracking-wider`}
+                              >
+                                {tierBadge}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                      .filter(Boolean),
+                  );
+                })()}
+                {fullInventory?.keeperHearts &&
+                  fullInventory.keeperHearts.length > 0 &&
+                  (() => {
+                    const grouped = new Map<string, number>();
+                    for (const h of fullInventory.keeperHearts) {
+                      grouped.set(h.biome, (grouped.get(h.biome) ?? 0) + 1);
+                    }
+                    const biomeColors: Record<string, string> = {
+                      FOREST_VALLEY: "text-green-400",
+                      ISLAND_ARCHIPELAGO: "text-teal-400",
+                      SNOW_PEAK: "text-sky-400",
+                      DESERT_DUNE: "text-amber-400",
+                      VOLCANIC_CRAG: "text-red-400",
+                      MYTHIC_VOID: "text-violet-400",
+                      MYTHIC_AETHER: "text-yellow-400",
+                    };
+                    const biomeBorders: Record<string, string> = {
+                      FOREST_VALLEY: "border-green-400/30",
+                      ISLAND_ARCHIPELAGO: "border-teal-400/30",
+                      SNOW_PEAK: "border-sky-400/30",
+                      DESERT_DUNE: "border-amber-400/30",
+                      VOLCANIC_CRAG: "border-red-400/30",
+                      MYTHIC_VOID: "border-violet-400/30",
+                      MYTHIC_AETHER: "border-yellow-400/30",
+                    };
+                    return Array.from(grouped.entries()).map(([biome, qty]) => (
+                      <div
+                        key={`heart_${biome}`}
+                        className={`glassmorphism rounded-lg p-3 border ${biomeBorders[biome] ?? "border-fuchsia-400/30"} flex items-center gap-3`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-fuchsia-400/10 border border-fuchsia-400/30 flex items-center justify-center flex-shrink-0 text-lg">
+                          ♥
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`text-sm font-jetbrains font-medium ${biomeColors[biome] ?? "text-fuchsia-400"}`}
+                            >
+                              Keeper Heart
+                            </p>
+                            {qty >= 2 && (
+                              <span className="text-[10px] font-jetbrains text-fuchsia-400 bg-fuchsia-400/10 border border-fuchsia-400/30 px-1.5 py-0.5 rounded flex-shrink-0 font-bold">
+                                ×{qty}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-white/40 text-xs font-jetbrains">
+                            {biome.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-orbitron text-fuchsia-400 opacity-60 uppercase tracking-wider">
+                          KEEPER
+                        </span>
+                      </div>
+                    ));
+                  })()}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

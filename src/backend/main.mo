@@ -101,11 +101,61 @@ actor CyberGenesisLandMint {
   };
 
   public type LandToken = { token_id : Nat; rarity : Text };
+  // ── Crystal, Booster & Cache Drop Types ──
+
+  public type CrystalKind = { #Burnite; #Synthex; #Cryonix };
+  public type CrystalTier = { #T1; #T2 };
+  public type CrystalItem = {
+    kind : CrystalKind;
+    tier : CrystalTier;
+    quantity : Nat;
+  };
+
+  public type BoosterKind = { #B250; #B500; #B1000 };
+  public type BoosterItem = {
+    kind : BoosterKind;
+    quantity : Nat;
+  };
+
+  public type KeeperHeartItem = {
+    biome : Text;
+  };
+
+  public type CacheDropMod = {
+    modId : Nat;
+    rarityTier : Nat;
+    subtype : Text;
+    instanceId : Nat;
+  };
+
+  public type CacheDropItem = {
+    #mod : CacheDropMod;
+    #crystal : CrystalItem;
+    #booster : BoosterItem;
+    #keeperHeart : KeeperHeartItem;
+  };
+
+  public type CacheOpenResult = {
+    items : [CacheDropItem];
+    energySpent : Nat;
+  };
+
+  public type FullInventory = {
+    crystals : [CrystalItem];
+    boosters : [BoosterItem];
+    keeperHearts : [KeeperHeartItem];
+  };
+
+
 
   let landRegistry = Map.empty<Principal, [LandData]>();
   let lootCaches = Map.empty<Principal, [LootCache]>();
   let landTokens = Map.empty<Principal, [LandToken]>();
   let playerInventory = Map.empty<Principal, [ModifierInstance]>();
+  let playerCrystals = Map.empty<Principal, [CrystalItem]>();
+  let playerBoosters = Map.empty<Principal, [BoosterItem]>();
+  let playerKeeperHearts = Map.empty<Principal, [KeeperHeartItem]>();
+
 
   var nextCacheId : Nat = 0;
   var nextLandId : Nat = 0;
@@ -1294,5 +1344,340 @@ actor CyberGenesisLandMint {
     if (amount > gTreasuryBalance) { Runtime.trap("Insufficient treasury balance") };
     gTreasuryBalance := gTreasuryBalance - amount;
   };
+
+
+  // ── Cache Drop Helpers ──
+
+  func rollRandom(seed : Nat, salt : Nat) : Nat {
+    let a = seed * 1664525 + 1013904223;
+    let b = a + salt * 22695477 + 1;
+    (b * 6364136 + salt + 1) % 100
+  };
+
+  let commonOrdinary : [Nat] = [1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 14];
+  let commonSpecial  : [Nat] = [3, 8, 13];
+  let commonUltra    : [Nat] = [15];
+  let rareOrdinary   : [Nat] = [17, 18, 19, 20, 21, 23, 26, 27, 28, 29];
+  let rareSpecial    : [Nat] = [16, 22, 24, 25];
+  let rareUltra      : [Nat] = [30];
+  let legendaryOrdinary : [Nat] = [33, 34, 35, 36, 37, 38, 40];
+  let legendarySpecial  : [Nat] = [31, 32, 41];
+  let legendaryUltra    : [Nat] = [39, 42];
+  let mythicOrdinary : [Nat] = [43, 44, 46];
+  let mythicSpecial  : [Nat] = [47, 48];
+  let mythicUltra    : [Nat] = [45];
+
+  func pickModFromPool(pool : [Nat], seed : Nat) : Nat {
+    if (pool.size() == 0) { 1 }
+    else { pool[seed % pool.size()] }
+  };
+
+  // Subtype: 0..81 = ordinary (82%), 82..97 = special (16.5%), 98..99 = ultra (1.5%)
+  // Weights: ordinary=100, special=20, ultra=2 → total=122 (roughly)
+  // We use: r<82 ordinary, r<98 special, else ultra
+  func pickModId(rarityTier : Nat, seed : Nat, salt : Nat) : (Nat, Text) {
+    let r = rollRandom(seed, salt + 1000);
+    switch (rarityTier) {
+      case 1 { // Common
+        if      (r < 82) { (pickModFromPool(commonOrdinary, seed + salt), "ordinary") }
+        else if (r < 98) { (pickModFromPool(commonSpecial,  seed + salt), "special") }
+        else             { (pickModFromPool(commonUltra,    seed + salt), "ultra") }
+      };
+      case 2 { // Rare
+        if      (r < 82) { (pickModFromPool(rareOrdinary, seed + salt), "ordinary") }
+        else if (r < 98) { (pickModFromPool(rareSpecial,  seed + salt), "special") }
+        else             { (pickModFromPool(rareUltra,    seed + salt), "ultra") }
+      };
+      case 3 { // Legendary
+        if      (r < 82) { (pickModFromPool(legendaryOrdinary, seed + salt), "ordinary") }
+        else if (r < 98) { (pickModFromPool(legendarySpecial,  seed + salt), "special") }
+        else             { (pickModFromPool(legendaryUltra,    seed + salt), "ultra") }
+      };
+      case _ { // Mythic
+        if      (r < 82) { (pickModFromPool(mythicOrdinary, seed + salt), "ordinary") }
+        else if (r < 98) { (pickModFromPool(mythicSpecial,  seed + salt), "special") }
+        else             { (pickModFromPool(mythicUltra,    seed + salt), "ultra") }
+      };
+    }
+  };
+
+  func getRarityTierForCacheTier(cacheTier : Nat, seed : Nat) : Nat {
+    let r = rollRandom(seed, 7777);
+    switch (cacheTier) {
+      case 1 { // Common cache: 94.8% Common, 5% Rare, 0.2% Legendary, 0% Mythic
+        if      (r < 95) { 1 }
+        else if (r < 100) { 2 }
+        else              { 1 }
+      };
+      case 2 { // Rare cache: 70% Common, 25% Rare, 4.8% Legendary, 0.2% Mythic
+        if      (r < 70) { 1 }
+        else if (r < 95) { 2 }
+        else if (r < 100){ 3 }
+        else             { 4 }
+      };
+      case 3 { // Legendary cache: 38% Common, 45% Rare, 16.2% Legendary, 0.8% Mythic
+        if      (r < 38) { 1 }
+        else if (r < 83) { 2 }
+        else if (r < 99) { 3 }
+        else             { 4 }
+      };
+      case _ { 1 };
+    }
+  };
+
+  func getCrystalDrop(cacheTier : Nat, seed : Nat, salt : Nat) : CrystalItem {
+    let r = rollRandom(seed, salt + 3333);
+    switch (cacheTier) {
+      case 1 { // Common: Burnite T1=45, Synthex T1=32, Cryonix T1=20, Burnite T2=2, Synthex T2=0.7, Cryonix T2=0.3
+        if      (r < 45) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 77) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 97) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 99) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else             { { kind = #Synthex; tier = #T2; quantity = 1 } }
+      };
+      case 2 { // Rare: Burnite T1=32, Synthex T1=28, Cryonix T1=25, Burnite T2=8, Synthex T2=5, Cryonix T2=2
+        if      (r < 32) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 60) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 85) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 93) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else if (r < 98) { { kind = #Synthex; tier = #T2; quantity = 1 } }
+        else             { { kind = #Cryonix; tier = #T2; quantity = 1 } }
+      };
+      case _ { // Legendary: Burnite T1=24, Synthex T1=22, Cryonix T1=28, Burnite T2=14, Synthex T2=9, Cryonix T2=3
+        if      (r < 24) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 46) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 74) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 88) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else if (r < 97) { { kind = #Synthex; tier = #T2; quantity = 1 } }
+        else             { { kind = #Cryonix; tier = #T2; quantity = 1 } }
+      };
+    }
+  };
+
+  func getBoosterDrop(cacheTier : Nat, seed : Nat, salt : Nat) : BoosterItem {
+    let r = rollRandom(seed, salt + 5555);
+    switch (cacheTier) {
+      case 1 { // Common: +250=70%, +500=27%, +1000=3%
+        if      (r < 70) { { kind = #B250; quantity = 1 } }
+        else if (r < 97) { { kind = #B500; quantity = 1 } }
+        else             { { kind = #B1000; quantity = 1 } }
+      };
+      case 2 { // Rare: +250=50%, +500=40%, +1000=10%
+        if      (r < 50) { { kind = #B250; quantity = 1 } }
+        else if (r < 90) { { kind = #B500; quantity = 1 } }
+        else             { { kind = #B1000; quantity = 1 } }
+      };
+      case _ { // Legendary: +250=30%, +500=50%, +1000=20%
+        if      (r < 30) { { kind = #B250; quantity = 1 } }
+        else if (r < 80) { { kind = #B500; quantity = 1 } }
+        else             { { kind = #B1000; quantity = 1 } }
+      };
+    }
+  };
+
+  let biomeList : [Text] = [
+    "FOREST_VALLEY", "ISLAND_ARCHIPELAGO", "SNOW_PEAK",
+    "DESERT_DUNE", "VOLCANIC_CRAG", "MYTHIC_VOID", "MYTHIC_AETHER"
+  ];
+
+  func addCrystalToInventory(caller : Principal, item : CrystalItem) {
+    let existing = switch (playerCrystals.get(caller)) {
+      case (?c) { c }; case null { [] };
+    };
+    var found = false;
+    var updated : [CrystalItem] = [];
+    for (c in existing.vals()) {
+      if (c.kind == item.kind and c.tier == item.tier) {
+        updated := ([updated, [{ c with quantity = c.quantity + 1 }]]).flatten();
+        found := true;
+      } else {
+        updated := ([updated, [c]]).flatten();
+      };
+    };
+    if (not found) { updated := ([updated, [item]]).flatten() };
+    playerCrystals.add(caller, updated);
+  };
+
+  func addBoosterToInventory(caller : Principal, item : BoosterItem) {
+    let existing = switch (playerBoosters.get(caller)) {
+      case (?b) { b }; case null { [] };
+    };
+    var found = false;
+    var updated : [BoosterItem] = [];
+    for (b in existing.vals()) {
+      if (b.kind == item.kind) {
+        updated := ([updated, [{ b with quantity = b.quantity + 1 }]]).flatten();
+        found := true;
+      } else {
+        updated := ([updated, [b]]).flatten();
+      };
+    };
+    if (not found) { updated := ([updated, [item]]).flatten() };
+    playerBoosters.add(caller, updated);
+  };
+
+  // ── New Cache Open System ──
+
+  public shared ({ caller }) func openCache(cacheId : Nat) : async CacheOpenResult {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can open caches");
+    };
+    let userCaches = switch (lootCaches.get(caller)) {
+      case (?c) { c }; case null { Runtime.trap("No caches found") };
+    };
+    var cacheIndex : ?Nat = null;
+    var i = 0;
+    for (cache in userCaches.vals()) {
+      if (cache.cache_id == cacheId) { cacheIndex := ?i };
+      i += 1;
+    };
+    let index = switch (cacheIndex) {
+      case null { Runtime.trap("Cache not found") };
+      case (?idx) { idx };
+    };
+    let cache = userCaches[index];
+    if (cache.owner != caller) { Runtime.trap("Unauthorized") };
+    if (cache.is_opened) { Runtime.trap("Cache already opened") };
+
+    // Energy cost: tier 1=200, tier 2=400, tier 3=800
+    let energyCost : Nat = switch (cache.tier) {
+      case 1 { 200 }; case 2 { 400 }; case 3 { 800 }; case _ { 200 };
+    };
+    let lands = switch (landRegistry.get(caller)) {
+      case null { Runtime.trap("No land found") };
+      case (?l) { l };
+    };
+    let updatedLand = updateCharge(lands[0]);
+    if (updatedLand.cycleCharge < energyCost) {
+      Runtime.trap("Insufficient energy: need " # energyCost.toText());
+    };
+    let deductedLand = { updatedLand with cycleCharge = updatedLand.cycleCharge - energyCost };
+    let updatedLands = Array.tabulate(lands.size(), func(idx : Nat) : LandData {
+      if (idx == 0) { deductedLand } else { lands[idx] };
+    });
+    landRegistry.add(caller, updatedLands);
+
+    // Build random seed
+    let baseSeed = (hashPrincipal(caller) + nextModifierInstanceId * 7919 + (Int.abs(Time.now()) % 999983)) % 999983;
+
+    var items : [CacheDropItem] = [];
+
+    // Slot 1: Mod — 60%/80%/100%
+    let modThreshold = switch (cache.tier) { case 1 { 60 }; case 2 { 80 }; case _ { 100 } };
+    let modRoll = rollRandom(baseSeed, 1);
+    if (modRoll < modThreshold) {
+      let rarityTier = getRarityTierForCacheTier(cache.tier, baseSeed + 11);
+      let multiplier = switch (rarityTier) {
+        case 1 { 1.1 }; case 2 { 1.25 }; case 3 { 1.5 }; case _ { 2.0 };
+      };
+      let (modId, subtype) = pickModId(rarityTier, baseSeed, 22);
+      let instanceId = nextModifierInstanceId;
+      nextModifierInstanceId += 1;
+      let newInst : ModifierInstance = {
+        modifierInstanceId = instanceId;
+        modifierType = "mod_" # modId.toText();
+        rarity_tier = rarityTier;
+        multiplier_value = multiplier;
+        model_url = "";
+      };
+      let inv = switch (playerInventory.get(caller)) { case (?v) { v }; case null { [] } };
+      playerInventory.add(caller, ([inv, [newInst]]).flatten());
+      items := ([items, [#mod({ modId; rarityTier; subtype; instanceId })]]).flatten();
+    };
+
+    // Slot 2: Booster — 30%/45%/60%
+    let boosterThreshold = switch (cache.tier) { case 1 { 30 }; case 2 { 45 }; case _ { 60 } };
+    let boosterRoll = rollRandom(baseSeed, 33);
+    if (boosterRoll < boosterThreshold) {
+      let item = getBoosterDrop(cache.tier, baseSeed, 44);
+      addBoosterToInventory(caller, item);
+      items := ([items, [#booster(item)]]).flatten();
+    };
+
+    // Slot 3: Crystal #1 — 40%/60%/80%
+    let crystal1Threshold = switch (cache.tier) { case 1 { 40 }; case 2 { 60 }; case _ { 80 } };
+    let crystal1Roll = rollRandom(baseSeed, 55);
+    if (crystal1Roll < crystal1Threshold) {
+      let item = getCrystalDrop(cache.tier, baseSeed, 66);
+      addCrystalToInventory(caller, item);
+      items := ([items, [#crystal(item)]]).flatten();
+    };
+
+    // Slot 4: Crystal #2 — 10%/25%/45%
+    let crystal2Threshold = switch (cache.tier) { case 1 { 10 }; case 2 { 25 }; case _ { 45 } };
+    let crystal2Roll = rollRandom(baseSeed, 77);
+    if (crystal2Roll < crystal2Threshold) {
+      let item = getCrystalDrop(cache.tier, baseSeed + 111, 88);
+      addCrystalToInventory(caller, item);
+      items := ([items, [#crystal(item)]]).flatten();
+    };
+
+    // Slot 5: Keeper Heart — 0%/0%/2%
+    if (cache.tier == 3) {
+      let heartRoll = rollRandom(baseSeed, 99);
+      if (heartRoll < 2) {
+        let biomeIdx = (baseSeed + 13) % biomeList.size();
+        let heart : KeeperHeartItem = { biome = biomeList[biomeIdx] };
+        let existing = switch (playerKeeperHearts.get(caller)) {
+          case (?h) { h }; case null { [] };
+        };
+        playerKeeperHearts.add(caller, ([existing, [heart]]).flatten());
+        items := ([items, [#keeperHeart(heart)]]).flatten();
+      };
+    };
+
+    // Mark cache as opened
+    let updatedCaches = Array.tabulate(userCaches.size(), func(idx : Nat) : LootCache {
+      if (idx == index) { { cache with is_opened = true } } else { userCaches[idx] }
+    });
+    lootCaches.add(caller, updatedCaches);
+
+    { items; energySpent = energyCost }
+  };
+
+  public shared ({ caller }) func useBooster(boosterKind : BoosterKind) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let existing = switch (playerBoosters.get(caller)) {
+      case (?b) { b }; case null { Runtime.trap("No boosters") };
+    };
+    var found = false;
+    var updated : [BoosterItem] = [];
+    for (b in existing.vals()) {
+      if (b.kind == boosterKind and not found) {
+        if (b.quantity == 0) { Runtime.trap("No boosters of this type") };
+        found := true;
+        if (b.quantity > 1) {
+          updated := ([updated, [{ b with quantity = b.quantity - 1 }]]).flatten();
+        };
+      } else {
+        updated := ([updated, [b]]).flatten();
+      };
+    };
+    if (not found) { Runtime.trap("Booster not found") };
+    playerBoosters.add(caller, updated);
+
+    let boost = switch (boosterKind) { case (#B250) { 250 }; case (#B500) { 500 }; case _ { 1000 } };
+    let lands = switch (landRegistry.get(caller)) {
+      case null { Runtime.trap("No land") }; case (?l) { l };
+    };
+    let land = updateCharge(lands[0]);
+    let cap : Int = land.chargeCap;
+    let newCharge = if (land.cycleCharge + boost > cap) { cap } else { land.cycleCharge + boost };
+    let boostedLand = { land with cycleCharge = newCharge };
+    landRegistry.add(caller, Array.tabulate(lands.size(), func(idx : Nat) : LandData {
+      if (idx == 0) { boostedLand } else { lands[idx] }
+    }));
+  };
+
+  public query ({ caller }) func getFullInventory() : async FullInventory {
+    {
+      crystals = switch (playerCrystals.get(caller)) { case (?c) { c }; case null { [] } };
+      boosters = switch (playerBoosters.get(caller)) { case (?b) { b }; case null { [] } };
+      keeperHearts = switch (playerKeeperHearts.get(caller)) { case (?h) { h }; case null { [] } };
+    }
+  };
+
 
 };

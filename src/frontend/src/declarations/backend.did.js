@@ -129,6 +129,22 @@ export const UpgradeResult = IDL.Variant({
   }),
 });
 
+
+export const CrystalKind = IDL.Variant({ 'Burnite': IDL.Null, 'Synthex': IDL.Null, 'Cryonix': IDL.Null });
+export const CrystalTier = IDL.Variant({ 'T1': IDL.Null, 'T2': IDL.Null });
+export const CrystalItem = IDL.Record({ 'kind': CrystalKind, 'tier': CrystalTier, 'quantity': IDL.Nat });
+export const BoosterKind = IDL.Variant({ 'B250': IDL.Null, 'B500': IDL.Null, 'B1000': IDL.Null });
+export const BoosterItem = IDL.Record({ 'kind': BoosterKind, 'quantity': IDL.Nat });
+export const KeeperHeartItem = IDL.Record({ 'biome': IDL.Text });
+export const CacheDropMod = IDL.Record({ 'modId': IDL.Nat, 'rarityTier': IDL.Nat, 'subtype': IDL.Text, 'instanceId': IDL.Nat });
+export const CacheDropItem = IDL.Variant({
+  'mod': CacheDropMod,
+  'crystal': CrystalItem,
+  'booster': BoosterItem,
+  'keeperHeart': KeeperHeartItem,
+});
+export const CacheOpenResult = IDL.Record({ 'items': IDL.Vec(CacheDropItem), 'energySpent': IDL.Nat });
+export const FullInventory = IDL.Record({ 'crystals': IDL.Vec(CrystalItem), 'boosters': IDL.Vec(BoosterItem), 'keeperHearts': IDL.Vec(KeeperHeartItem) });
 export const idlService = IDL.Service({
   'adminGetLandData' : IDL.Func(
       [IDL.Principal],
@@ -352,6 +368,10 @@ export const idlFactory = ({ IDL }) => {
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'mintLand' : IDL.Func([], [LandData], []),
     'processCache' : IDL.Func([IDL.Nat], [ModifierInstance], []),
+    'openCache' : IDL.Func([IDL.Nat], [CacheOpenResult], []),
+    'useBooster' : IDL.Func([BoosterKind], [], []),
+    'getFullInventory' : IDL.Func([], [FullInventory], ['query']),
+
     'removeModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setGovernanceCanister' : IDL.Func([IDL.Principal], [], []),

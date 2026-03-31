@@ -1,8 +1,5 @@
-import type {
-  DiscoverCacheResult,
-  LootCache,
-  ModifierInstance,
-} from "@/backend";
+import type { DiscoverCacheResult, LootCache } from "@/backend";
+import type { CacheOpenResult } from "@/cacheTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useActor } from "@/hooks/useActor";
@@ -14,19 +11,6 @@ import { Clock, Loader2, Package, Sparkles, Zap } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { PLANNED_MODIFIER_CATALOG } from "../data/modifierCatalog";
-
-function getCatalogEntry(name: string) {
-  return PLANNED_MODIFIER_CATALOG.find(
-    (c) => c.name.toLowerCase() === name.toLowerCase(),
-  );
-}
-
-const RARITY_COLORS: Record<number, string> = {
-  1: "text-gray-400",
-  2: "text-blue-400",
-  3: "text-purple-400",
-  4: "text-yellow-400",
-};
 
 export default function Discovery() {
   const { actor } = useActor();
@@ -45,16 +29,17 @@ export default function Discovery() {
   const [processingCacheId, setProcessingCacheId] = useState<bigint | null>(
     null,
   );
-  const [lootLog, setLootLog] = useState<
-    Array<{
-      id: string;
-      name: string;
-      itemType: string;
-      time: string;
+  type LootEntry = {
+    id: string;
+    time: string;
+    items: Array<{
+      label: string;
+      sublabel: string;
       assetUrl?: string;
-      rarityTier?: number;
-    }>
-  >([]);
+      color: string;
+    }>;
+  };
+  const [lootLog, setLootLog] = useState<LootEntry[]>([]);
 
   const selectedLand = lands?.[0];
 
@@ -82,8 +67,8 @@ export default function Discovery() {
     }
     const tierCosts = {
       1: { cbr: BigInt(10000000000), charge: 200 },
-      2: { cbr: BigInt(25000000000), charge: 500 },
-      3: { cbr: BigInt(50000000000), charge: 1000 },
+      2: { cbr: BigInt(25000000000), charge: 400 },
+      3: { cbr: BigInt(50000000000), charge: 800 },
     };
     const cost = tierCosts[tier as keyof typeof tierCosts];
     if (!tokenBalance || tokenBalance < cost.cbr) {
@@ -134,32 +119,114 @@ export default function Discovery() {
     }
     setProcessingCacheId(cacheId);
     try {
-      const result: ModifierInstance = await actor.processCache(cacheId);
-      toast.success(
-        `Modifier received: ${result.modifierType} (Level ${result.rarity_tier})`,
-      );
-
-      const cat = getCatalogEntry(result.modifierType);
+      const result: CacheOpenResult = await (actor as any).openCache(cacheId);
       const now = new Date();
       const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
-      setLootLog((prev) => [
-        {
-          id: Date.now().toString(),
-          name: cat?.name ?? result.modifierType,
-          itemType: "Modifier",
-          time: timeStr,
-          assetUrl: cat?.asset_url,
-          rarityTier: cat?.rarity_tier ?? Number(result.rarity_tier),
-        },
-        ...prev,
-      ]);
+
+      const items = result.items.map((item) => {
+        if (item.__kind__ === "mod") {
+          const modId = Number(item.mod.modId);
+          const cat =
+            PLANNED_MODIFIER_CATALOG.find((c) => c.id === modId) ||
+            PLANNED_MODIFIER_CATALOG[modId - 1];
+          const rarityTier = Number(item.mod.rarityTier);
+          const subtypeLabel =
+            item.mod.subtype === "Ultra"
+              ? " [ULTRA]"
+              : item.mod.subtype === "Special"
+                ? " [SPECIAL]"
+                : "";
+          return {
+            label: cat?.name ?? `Modifier #${modId}`,
+            sublabel: `${["", "Common", "Rare", "Legendary", "Mythic"][rarityTier] ?? "Mod"}${subtypeLabel}`,
+            assetUrl: cat?.asset_url,
+            color:
+              rarityTier === 4
+                ? "text-yellow-400"
+                : rarityTier === 3
+                  ? "text-purple-400"
+                  : rarityTier === 2
+                    ? "text-blue-400"
+                    : "text-gray-400",
+          };
+        }
+        if (item.__kind__ === "crystal") {
+          const kindName = item.crystal.kind.__kind__;
+          const tierName = item.crystal.tier.__kind__;
+          const crystalColors: Record<string, string> = {
+            Burnite: "text-amber-400",
+            Synthex: "text-emerald-400",
+            Cryonix: "text-cyan-400",
+          };
+          const crystalImages: Record<string, string> = {
+            Burnite_T1: "/assets/generated/crystal_burnite_t1.webp",
+            Burnite_T2: "/assets/generated/crystal_burnite_t2.webp",
+            Synthex_T1: "/assets/generated/crystal_synthex_t1.webp",
+            Synthex_T2: "/assets/generated/crystal_synthex_t2.webp",
+            Cryonix_T1: "/assets/generated/crystal_cryonix_t1.webp",
+            Cryonix_T2: "/assets/generated/crystal_cryonix_t2.webp",
+          };
+          return {
+            label: `${kindName} ${tierName === "T1" ? "Fragment" : "Core"}`,
+            sublabel: "Crystal",
+            assetUrl: crystalImages[`${kindName}_${tierName}`],
+            color: crystalColors[kindName] ?? "text-cyan-400",
+          };
+        }
+        if (item.__kind__ === "booster") {
+          const boostMap: Record<string, string> = {
+            B250: "+250",
+            B500: "+500",
+            B1000: "+1000",
+          };
+          const boostColors: Record<string, string> = {
+            B250: "text-green-400",
+            B500: "text-blue-400",
+            B1000: "text-purple-400",
+          };
+          const kindName = item.booster.kind.__kind__;
+          return {
+            label: `Energy Booster ${boostMap[kindName] ?? ""}`,
+            sublabel: "Booster",
+            assetUrl: `/assets/generated/booster_${kindName === "B250" ? "250" : kindName === "B500" ? "500" : "1000"}.webp`,
+            color: boostColors[kindName] ?? "text-green-400",
+          };
+        }
+        if (item.__kind__ === "keeperHeart") {
+          const biome = item.keeperHeart.biome;
+          const biomeColors: Record<string, string> = {
+            FOREST_VALLEY: "text-green-400",
+            ISLAND_ARCHIPELAGO: "text-teal-400",
+            SNOW_PEAK: "text-sky-400",
+            DESERT_DUNE: "text-amber-400",
+            VOLCANIC_CRAG: "text-red-400",
+            MYTHIC_VOID: "text-violet-400",
+            MYTHIC_AETHER: "text-yellow-400",
+          };
+          return {
+            label: "Keeper Heart",
+            sublabel: biome.replace(/_/g, " "),
+            assetUrl: `/assets/generated/keeper_heart_${biome.toLowerCase()}.webp`,
+            color: biomeColors[biome] ?? "text-fuchsia-400",
+          };
+        }
+        return { label: "Unknown Drop", sublabel: "", color: "text-gray-400" };
+      });
+
+      toast.success(`Cache opened! ${result.items.length} item(s) received`);
+      setLootLog((prev) =>
+        [{ id: Date.now().toString(), time: timeStr, items }, ...prev].slice(
+          0,
+          25,
+        ),
+      );
 
       await loadCaches();
       queryClient.invalidateQueries({ queryKey: ["modifierInventory"] });
+      queryClient.invalidateQueries({ queryKey: ["landData"] });
+      queryClient.invalidateQueries({ queryKey: ["fullInventory"] });
     } catch (error: any) {
-      toast.error(
-        `Cache processing error: ${error.message || "Unknown error"}`,
-      );
+      toast.error(`Cache opening error: ${error.message || "Unknown error"}`);
     } finally {
       setProcessingCacheId(null);
     }
@@ -350,7 +417,7 @@ export default function Discovery() {
                   <p className="text-white/50 text-sm font-jetbrains">
                     Charge:{" "}
                     <span className="text-[#00ffff] font-bold font-jetbrains">
-                      {tier === 1 ? "200" : tier === 2 ? "500" : "1000"}
+                      {tier === 1 ? "200" : tier === 2 ? "400" : "800"}
                     </span>
                   </p>
                 </div>
@@ -403,36 +470,48 @@ export default function Discovery() {
               {lootLog.map((entry, idx) => (
                 <div
                   key={entry.id}
-                  className="glassmorphism rounded-lg p-3 border border-[#9933ff]/30 flex items-center gap-3"
+                  className="glassmorphism rounded-lg p-3 border border-[#9933ff]/30"
                   data-ocid={`loot_history.item.${idx + 1}`}
                 >
-                  {entry.assetUrl ? (
-                    <img
-                      src={entry.assetUrl}
-                      alt={entry.name}
-                      className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
-                      style={{
-                        filter: `drop-shadow(0 0 6px ${entry.rarityTier === 4 ? "rgba(250,204,21,0.6)" : entry.rarityTier === 3 ? "rgba(168,85,247,0.5)" : entry.rarityTier === 2 ? "rgba(96,165,250,0.4)" : "rgba(156,163,175,0.3)"})`,
-                      }}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[#9933ff]/20 border border-[#9933ff]/40 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-[#9933ff]" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium font-jetbrains text-sm truncate">
-                      {entry.name}
-                    </p>
-                    <p
-                      className={`text-xs font-jetbrains ${RARITY_COLORS[entry.rarityTier ?? 1] ?? "text-gray-400"}`}
-                    >
-                      {entry.itemType}
-                    </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white/50 text-xs font-jetbrains">
+                      {entry.time}
+                    </span>
+                    <span className="text-[#9933ff] text-xs font-jetbrains">
+                      {entry.items.length} item
+                      {entry.items.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
-                  <p className="text-white/50 text-xs font-jetbrains flex-shrink-0">
-                    {entry.time}
-                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {entry.items.map((item, i) => (
+                      <div
+                        key={`${item.label}-${i}`}
+                        className="flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10"
+                      >
+                        {item.assetUrl ? (
+                          <img
+                            src={item.assetUrl}
+                            alt={item.label}
+                            className="w-6 h-6 rounded object-contain"
+                          />
+                        ) : (
+                          <Sparkles className={`w-4 h-4 ${item.color}`} />
+                        )}
+                        <div>
+                          <p
+                            className={`text-xs font-jetbrains font-medium ${item.color}`}
+                          >
+                            {item.label}
+                          </p>
+                          {item.sublabel && (
+                            <p className="text-[10px] text-white/40 font-jetbrains">
+                              {item.sublabel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

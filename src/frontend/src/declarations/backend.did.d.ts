@@ -103,6 +103,20 @@ export interface http_request_result {
   'body' : Uint8Array,
   'headers' : Array<http_header>,
 }
+export type CrystalKind = { 'Burnite' : null } | { 'Synthex' : null } | { 'Cryonix' : null };
+export type CrystalTier = { 'T1' : null } | { 'T2' : null };
+export interface CrystalItem { 'kind' : CrystalKind, 'tier' : CrystalTier, 'quantity' : bigint }
+export type BoosterKind = { 'B250' : null } | { 'B500' : null } | { 'B1000' : null };
+export interface BoosterItem { 'kind' : BoosterKind, 'quantity' : bigint }
+export interface KeeperHeartItem { 'biome' : string }
+export interface CacheDropMod { 'modId' : bigint, 'rarityTier' : bigint, 'subtype' : string, 'instanceId' : bigint }
+export type CacheDropItem =
+  { 'mod' : CacheDropMod } |
+  { 'crystal' : CrystalItem } |
+  { 'booster' : BoosterItem } |
+  { 'keeperHeart' : KeeperHeartItem };
+export interface CacheOpenResult { 'items' : Array<CacheDropItem>, 'energySpent' : bigint }
+export interface FullInventory { 'crystals' : Array<CrystalItem>, 'boosters' : Array<BoosterItem>, 'keeperHearts' : Array<KeeperHeartItem> }
 export interface _SERVICE {
   'adminGetLandData' : ActorMethod<[Principal], [] | [Array<LandData>]>,
   'adminSetAllModifiers' : ActorMethod<[Array<Modifier>], undefined>,
@@ -132,6 +146,10 @@ export interface _SERVICE {
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'mintLand' : ActorMethod<[], LandData>,
   'processCache' : ActorMethod<[bigint], ModifierInstance>,
+  'openCache' : ActorMethod<[bigint], CacheOpenResult>,
+  'useBooster' : ActorMethod<[BoosterKind], undefined>,
+  'getFullInventory' : ActorMethod<[], FullInventory>,
+
   'removeModifier' : ActorMethod<[bigint, bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setGovernanceCanister' : ActorMethod<[Principal], undefined>,
