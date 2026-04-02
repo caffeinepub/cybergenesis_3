@@ -159,12 +159,24 @@ export default function Discovery() {
             Cryonix: "text-cyan-400",
           };
           const crystalImages: Record<string, string> = {
-            Burnite_T1: "/assets/generated/crystal_burnite_t1.webp",
-            Burnite_T2: "/assets/generated/crystal_burnite_t2.webp",
-            Synthex_T1: "/assets/generated/crystal_synthex_t1.webp",
-            Synthex_T2: "/assets/generated/crystal_synthex_t2.webp",
-            Cryonix_T1: "/assets/generated/crystal_cryonix_t1.webp",
-            Cryonix_T2: "/assets/generated/crystal_cryonix_t2.webp",
+            Burnite_T1:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_burnite_t1.webp",
+            Burnite_T2:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_burnite_t2.webp",
+            Burnite_T3:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_burnite_t3.webp",
+            Synthex_T1:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_synthex_t1.webp",
+            Synthex_T2:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_synthex_t2.webp",
+            Synthex_T3:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_synthex_t3.webp",
+            Cryonix_T1:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_cryonix_t1.webp",
+            Cryonix_T2:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_cryonix_t2.webp",
+            Cryonix_T3:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_cryonix_t3.webp",
           };
           return {
             label: `${kindName} ${tierName === "T1" ? "Fragment" : "Core"}`,
@@ -188,7 +200,7 @@ export default function Discovery() {
           return {
             label: `Energy Booster ${boostMap[kindName] ?? ""}`,
             sublabel: "Booster",
-            assetUrl: `/assets/generated/booster_${kindName === "B250" ? "250" : kindName === "B500" ? "500" : "1000"}.webp`,
+            assetUrl: `https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/booster_${kindName === "B250" ? "250" : kindName === "B500" ? "500" : "1000"}.webp`,
             color: boostColors[kindName] ?? "text-green-400",
           };
         }
@@ -206,7 +218,7 @@ export default function Discovery() {
           return {
             label: "Keeper Heart",
             sublabel: biome.replace(/_/g, " "),
-            assetUrl: `/assets/generated/keeper_heart_${biome.toLowerCase()}.webp`,
+            assetUrl: `https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/keeper_heart_${{ FOREST_VALLEY: "forest", ISLAND_ARCHIPELAGO: "island", SNOW_PEAK: "snow", DESERT_DUNE: "desert", VOLCANIC_CRAG: "volcanic", MYTHIC_VOID: "void", MYTHIC_AETHER: "aether" }[biome] ?? biome.toLowerCase()}.webp`,
             color: biomeColors[biome] ?? "text-fuchsia-400",
           };
         }

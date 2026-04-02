@@ -795,10 +795,12 @@ export default function LandDashboard({
                         key={cfg.kind.__kind__}
                         className={`glassmorphism rounded-lg p-3 border ${cfg.border} flex items-center gap-3 transition-all duration-150 ${cfg.glow}`}
                       >
-                        <div
-                          className={`w-10 h-10 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center flex-shrink-0`}
-                        >
-                          <Zap className={`w-5 h-5 ${cfg.color}`} />
+                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={`https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/booster_${cfg.kind.__kind__ === "B250" ? "250" : cfg.kind.__kind__ === "B500" ? "500" : "1000"}.webp`}
+                            alt={cfg.label}
+                            className="w-full h-full object-contain"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -902,10 +904,12 @@ export default function LandDashboard({
                             key={`${cfg.kind}_${tier}`}
                             className={`glassmorphism rounded-lg p-3 border ${cfg.border} flex items-center gap-3`}
                           >
-                            <div
-                              className={`w-10 h-10 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center flex-shrink-0`}
-                            >
-                              <Gem className={`w-5 h-5 ${cfg.color}`} />
+                            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={`https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_${cfg.kind.toLowerCase()}_${tier.toLowerCase()}.webp`}
+                                alt={label}
+                                className="w-full h-full object-contain"
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
@@ -964,8 +968,12 @@ export default function LandDashboard({
                         key={`heart_${biome}`}
                         className={`glassmorphism rounded-lg p-3 border ${biomeBorders[biome] ?? "border-fuchsia-400/30"} flex items-center gap-3`}
                       >
-                        <div className="w-10 h-10 rounded-lg bg-fuchsia-400/10 border border-fuchsia-400/30 flex items-center justify-center flex-shrink-0 text-lg">
-                          ♥
+                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={`https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/${({ FOREST_VALLEY: "keeper_heart_forest", ISLAND_ARCHIPELAGO: "keeper_heart_island", SNOW_PEAK: "keeper_heart_snow", DESERT_DUNE: "keeper_heart_desert", VOLCANIC_CRAG: "keeper_heart_volcanic", MYTHIC_VOID: "keeper_heart_void", MYTHIC_AETHER: "keeper_heart_aether" } as Record<string, string>)[biome] ?? "keeper_heart_forest"}.webp`}
+                            alt={`Keeper Heart ${biome}`}
+                            className="w-full h-full object-contain"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

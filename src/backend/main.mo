@@ -1351,7 +1351,7 @@ actor CyberGenesisLandMint {
   func rollRandom(seed : Nat, salt : Nat) : Nat {
     let a = seed * 1664525 + 1013904223;
     let b = a + salt * 22695477 + 1;
-    (b * 6364136 + salt + 1) % 100
+    (b * 6364136 + salt + 1) % 1000
   };
 
   let commonOrdinary : [Nat] = [1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 14];
@@ -1405,21 +1405,21 @@ actor CyberGenesisLandMint {
     let r = rollRandom(seed, 7777);
     switch (cacheTier) {
       case 1 { // Common cache: 94.8% Common, 5% Rare, 0.2% Legendary, 0% Mythic
-        if      (r < 95) { 1 }
-        else if (r < 100) { 2 }
-        else              { 1 }
+        if      (r < 948) { 1 }
+        else if (r < 998) { 2 }
+        else              { 3 }
       };
       case 2 { // Rare cache: 70% Common, 25% Rare, 4.8% Legendary, 0.2% Mythic
-        if      (r < 70) { 1 }
-        else if (r < 95) { 2 }
-        else if (r < 100){ 3 }
-        else             { 4 }
+        if      (r < 700) { 1 }
+        else if (r < 950) { 2 }
+        else if (r < 998) { 3 }
+        else              { 4 }
       };
       case 3 { // Legendary cache: 38% Common, 45% Rare, 16.2% Legendary, 0.8% Mythic
-        if      (r < 38) { 1 }
-        else if (r < 83) { 2 }
-        else if (r < 99) { 3 }
-        else             { 4 }
+        if      (r < 380) { 1 }
+        else if (r < 830) { 2 }
+        else if (r < 992) { 3 }
+        else              { 4 }
       };
       case _ { 1 };
     }
@@ -1428,28 +1428,29 @@ actor CyberGenesisLandMint {
   func getCrystalDrop(cacheTier : Nat, seed : Nat, salt : Nat) : CrystalItem {
     let r = rollRandom(seed, salt + 3333);
     switch (cacheTier) {
-      case 1 { // Common: Burnite T1=45, Synthex T1=32, Cryonix T1=20, Burnite T2=2, Synthex T2=0.7, Cryonix T2=0.3
-        if      (r < 45) { { kind = #Burnite; tier = #T1; quantity = 1 } }
-        else if (r < 77) { { kind = #Synthex; tier = #T1; quantity = 1 } }
-        else if (r < 97) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
-        else if (r < 99) { { kind = #Burnite; tier = #T2; quantity = 1 } }
-        else             { { kind = #Synthex; tier = #T2; quantity = 1 } }
+      case 1 { // Common: Burnite T1=45%, Synthex T1=32%, Cryonix T1=20%, Burnite T2=2%, Synthex T2=0.7%, Cryonix T2=0.3%
+        if      (r < 450) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 770) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 970) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 990) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else if (r < 997) { { kind = #Synthex; tier = #T2; quantity = 1 } }
+        else              { { kind = #Cryonix; tier = #T2; quantity = 1 } }
       };
-      case 2 { // Rare: Burnite T1=32, Synthex T1=28, Cryonix T1=25, Burnite T2=8, Synthex T2=5, Cryonix T2=2
-        if      (r < 32) { { kind = #Burnite; tier = #T1; quantity = 1 } }
-        else if (r < 60) { { kind = #Synthex; tier = #T1; quantity = 1 } }
-        else if (r < 85) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
-        else if (r < 93) { { kind = #Burnite; tier = #T2; quantity = 1 } }
-        else if (r < 98) { { kind = #Synthex; tier = #T2; quantity = 1 } }
-        else             { { kind = #Cryonix; tier = #T2; quantity = 1 } }
+      case 2 { // Rare: Burnite T1=32%, Synthex T1=28%, Cryonix T1=25%, Burnite T2=8%, Synthex T2=5%, Cryonix T2=2%
+        if      (r < 320) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 600) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 850) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 930) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else if (r < 980) { { kind = #Synthex; tier = #T2; quantity = 1 } }
+        else              { { kind = #Cryonix; tier = #T2; quantity = 1 } }
       };
-      case _ { // Legendary: Burnite T1=24, Synthex T1=22, Cryonix T1=28, Burnite T2=14, Synthex T2=9, Cryonix T2=3
-        if      (r < 24) { { kind = #Burnite; tier = #T1; quantity = 1 } }
-        else if (r < 46) { { kind = #Synthex; tier = #T1; quantity = 1 } }
-        else if (r < 74) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
-        else if (r < 88) { { kind = #Burnite; tier = #T2; quantity = 1 } }
-        else if (r < 97) { { kind = #Synthex; tier = #T2; quantity = 1 } }
-        else             { { kind = #Cryonix; tier = #T2; quantity = 1 } }
+      case _ { // Legendary: Burnite T1=24%, Synthex T1=22%, Cryonix T1=28%, Burnite T2=14%, Synthex T2=9%, Cryonix T2=3%
+        if      (r < 240) { { kind = #Burnite; tier = #T1; quantity = 1 } }
+        else if (r < 460) { { kind = #Synthex; tier = #T1; quantity = 1 } }
+        else if (r < 740) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
+        else if (r < 880) { { kind = #Burnite; tier = #T2; quantity = 1 } }
+        else if (r < 970) { { kind = #Synthex; tier = #T2; quantity = 1 } }
+        else              { { kind = #Cryonix; tier = #T2; quantity = 1 } }
       };
     }
   };
@@ -1458,19 +1459,19 @@ actor CyberGenesisLandMint {
     let r = rollRandom(seed, salt + 5555);
     switch (cacheTier) {
       case 1 { // Common: +250=70%, +500=27%, +1000=3%
-        if      (r < 70) { { kind = #B250; quantity = 1 } }
-        else if (r < 97) { { kind = #B500; quantity = 1 } }
-        else             { { kind = #B1000; quantity = 1 } }
+        if      (r < 700) { { kind = #B250; quantity = 1 } }
+        else if (r < 970) { { kind = #B500; quantity = 1 } }
+        else              { { kind = #B1000; quantity = 1 } }
       };
       case 2 { // Rare: +250=50%, +500=40%, +1000=10%
-        if      (r < 50) { { kind = #B250; quantity = 1 } }
-        else if (r < 90) { { kind = #B500; quantity = 1 } }
-        else             { { kind = #B1000; quantity = 1 } }
+        if      (r < 500) { { kind = #B250; quantity = 1 } }
+        else if (r < 900) { { kind = #B500; quantity = 1 } }
+        else              { { kind = #B1000; quantity = 1 } }
       };
       case _ { // Legendary: +250=30%, +500=50%, +1000=20%
-        if      (r < 30) { { kind = #B250; quantity = 1 } }
-        else if (r < 80) { { kind = #B500; quantity = 1 } }
-        else             { { kind = #B1000; quantity = 1 } }
+        if      (r < 300) { { kind = #B250; quantity = 1 } }
+        else if (r < 800) { { kind = #B500; quantity = 1 } }
+        else              { { kind = #B1000; quantity = 1 } }
       };
     }
   };
@@ -1563,7 +1564,7 @@ actor CyberGenesisLandMint {
     var items : [CacheDropItem] = [];
 
     // Slot 1: Mod — 60%/80%/100%
-    let modThreshold = switch (cache.tier) { case 1 { 60 }; case 2 { 80 }; case _ { 100 } };
+    let modThreshold = switch (cache.tier) { case 1 { 600 }; case 2 { 800 }; case _ { 1000 } };
     let modRoll = rollRandom(baseSeed, 1);
     if (modRoll < modThreshold) {
       let rarityTier = getRarityTierForCacheTier(cache.tier, baseSeed + 11);
@@ -1586,7 +1587,7 @@ actor CyberGenesisLandMint {
     };
 
     // Slot 2: Booster — 30%/45%/60%
-    let boosterThreshold = switch (cache.tier) { case 1 { 30 }; case 2 { 45 }; case _ { 60 } };
+    let boosterThreshold = switch (cache.tier) { case 1 { 300 }; case 2 { 450 }; case _ { 600 } };
     let boosterRoll = rollRandom(baseSeed, 33);
     if (boosterRoll < boosterThreshold) {
       let item = getBoosterDrop(cache.tier, baseSeed, 44);
@@ -1595,7 +1596,7 @@ actor CyberGenesisLandMint {
     };
 
     // Slot 3: Crystal #1 — 40%/60%/80%
-    let crystal1Threshold = switch (cache.tier) { case 1 { 40 }; case 2 { 60 }; case _ { 80 } };
+    let crystal1Threshold = switch (cache.tier) { case 1 { 400 }; case 2 { 600 }; case _ { 800 } };
     let crystal1Roll = rollRandom(baseSeed, 55);
     if (crystal1Roll < crystal1Threshold) {
       let item = getCrystalDrop(cache.tier, baseSeed, 66);
@@ -1604,7 +1605,7 @@ actor CyberGenesisLandMint {
     };
 
     // Slot 4: Crystal #2 — 10%/25%/45%
-    let crystal2Threshold = switch (cache.tier) { case 1 { 10 }; case 2 { 25 }; case _ { 45 } };
+    let crystal2Threshold = switch (cache.tier) { case 1 { 100 }; case 2 { 250 }; case _ { 450 } };
     let crystal2Roll = rollRandom(baseSeed, 77);
     if (crystal2Roll < crystal2Threshold) {
       let item = getCrystalDrop(cache.tier, baseSeed + 111, 88);
@@ -1615,7 +1616,7 @@ actor CyberGenesisLandMint {
     // Slot 5: Keeper Heart — 0%/0%/2%
     if (cache.tier == 3) {
       let heartRoll = rollRandom(baseSeed, 99);
-      if (heartRoll < 2) {
+      if (heartRoll < 20) {
         let biomeIdx = (baseSeed + 13) % biomeList.size();
         let heart : KeeperHeartItem = { biome = biomeList[biomeIdx] };
         let existing = switch (playerKeeperHearts.get(caller)) {
