@@ -177,6 +177,8 @@ export default function Discovery() {
               "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_cryonix_t2.webp",
             Cryonix_T3:
               "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_cryonix_t3.webp",
+            VoidNexus:
+              "https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_void.webp",
           };
           return {
             label: `${kindName} ${tierName === "T1" ? "Fragment" : "Core"}`,

@@ -402,9 +402,18 @@ export default function LandDashboard({
               </p>
             </div>
             <div>
-              <p className="text-white/50 text-sm font-jetbrains">Multiplier</p>
+              <p className="text-white/50 text-sm font-jetbrains">
+                Staking Boost
+              </p>
               <p className="text-white font-medium font-jetbrains">
-                {selectedLand.baseTokenMultiplier}x
+                {selectedLand.biome === "MYTHIC_VOID" ||
+                selectedLand.biome === "MYTHIC_AETHER"
+                  ? "×1.4"
+                  : selectedLand.biome === "SNOW_PEAK" ||
+                      selectedLand.biome === "DESERT_DUNE" ||
+                      selectedLand.biome === "VOLCANIC_CRAG"
+                    ? "×1.15"
+                    : "×1.0"}
               </p>
             </div>
           </div>
@@ -938,6 +947,26 @@ export default function LandDashboard({
                       .filter(Boolean),
                   );
                 })()}
+                {/* Void Nexus — coming in Crafting */}
+                <div className="glassmorphism rounded-lg p-3 border border-purple-400/30 flex items-center gap-3 opacity-60">
+                  <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    <img
+                      src="https://raw.githubusercontent.com/dobr312/cyberland/refs/heads/main/Caches/crystal_void.webp"
+                      alt="Void Nexus"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-jetbrains font-medium text-purple-400">
+                        Void Nexus
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-orbitron text-purple-400 opacity-60 uppercase tracking-wider">
+                      Coming in Crafting
+                    </span>
+                  </div>
+                </div>
                 {fullInventory?.keeperHearts &&
                   fullInventory.keeperHearts.length > 0 &&
                   (() => {

@@ -260,10 +260,8 @@ actor CyberGenesisLandMint {
         let hash = hashPrincipal(caller);
         let coordinates = generateCoordinates(hash);
         let biome = getBiome(hash);
-        let randVal = (hash + nextLandId) % 200;
-        let isMythicVoid = randVal == 0;
-        let finalBiome = if (isMythicVoid) { "MYTHIC_VOID" } else { biome };
-        let baseTokenMultiplier = if (isMythicVoid) { 1.25 } else { 1.0 };
+        let finalBiome = biome;
+        let baseTokenMultiplier = 1.0;
         let newLand : LandData = {
           principal = caller;
           coordinates;
@@ -302,10 +300,8 @@ actor CyberGenesisLandMint {
     let hash = hashPrincipal(caller) + nextLandId;
     let coordinates = generateCoordinates(hash);
     let biome = getBiome(hash);
-    let randVal = (hash + nextLandId) % 200;
-    let isMythicVoid = randVal == 0;
-    let finalBiome = if (isMythicVoid) { "MYTHIC_VOID" } else { biome };
-    let baseTokenMultiplier = if (isMythicVoid) { 1.25 } else { 1.0 };
+    let finalBiome = biome;
+    let baseTokenMultiplier = 1.0;
     let newLand : LandData = {
       principal = caller;
       coordinates;
@@ -1012,8 +1008,8 @@ actor CyberGenesisLandMint {
   // ── Governance Helpers ──
 
   func getBiomeMultiplierBP(biome : Text) : Nat {
-    if (biome == "MYTHIC_VOID" or biome == "MYTHIC_AETHER") { 150 }
-    else if (biome == "SNOW_PEAK" or biome == "DESERT_DUNE" or biome == "VOLCANIC_CRAG") { 120 }
+    if (biome == "MYTHIC_VOID" or biome == "MYTHIC_AETHER") { 140 }
+    else if (biome == "SNOW_PEAK" or biome == "DESERT_DUNE" or biome == "VOLCANIC_CRAG") { 115 }
     else { 100 }
   };
 
@@ -1023,15 +1019,38 @@ actor CyberGenesisLandMint {
       case (?l) { l };
       case null { return stakeAmount };
     };
+    // Quality scoring via rarity_tier: tier3=Legendary(special), tier4=Mythic(ultra), tier5=Keeper
     var maxBiomeBP : Nat = 100;
     var maxMods : Nat = 0;
+    var bestSpecialCount : Nat = 0;
+    var bestUltraCount : Nat = 0;
+    var hasKeeper : Bool = false;
     for (land in lands.vals()) {
       let bp = getBiomeMultiplierBP(land.biome);
       if (bp > maxBiomeBP) { maxBiomeBP := bp };
       let mods = land.attachedModifications.size();
-      if (mods > maxMods) { maxMods := mods };
+      if (mods > maxMods) {
+        maxMods := mods;
+        var specialCount : Nat = 0;
+        var ultraCount : Nat = 0;
+        var keeperFound : Bool = false;
+        for (mod in land.attachedModifications.vals()) {
+          if (mod.rarity_tier == 5) { keeperFound := true }
+          else if (mod.rarity_tier == 4) { ultraCount += 1 }
+          else if (mod.rarity_tier == 3) { specialCount += 1 };
+        };
+        bestSpecialCount := specialCount;
+        bestUltraCount := ultraCount;
+        hasKeeper := keeperFound;
+      };
     };
-    let modBP : Nat = 100 + (maxMods * 50 / 49);
+    // Base: +0.5% per mod (max ~24%), Keeper +10%
+    // Quality bonus: +0.5% per Legendary mod, +2% per Mythic mod (hidden)
+    let baseBP : Nat = 100 + (maxMods * 50 / 99);
+    let keeperBP : Nat = if (hasKeeper) { 10 } else { 0 };
+    let specialBP : Nat = bestSpecialCount / 2;
+    let ultraBP : Nat = bestUltraCount * 2;
+    let modBP : Nat = baseBP + keeperBP + specialBP + ultraBP;
     stakeAmount * maxBiomeBP * modBP / 10000
   };
 
@@ -1372,30 +1391,30 @@ actor CyberGenesisLandMint {
     else { pool[seed % pool.size()] }
   };
 
-  // Subtype: 0..81 = ordinary (82%), 82..97 = special (16.5%), 98..99 = ultra (1.5%)
+  // Subtype: 0..819 = ordinary (82%), 820..984 = special (16.5%), 985..999 = ultra (1.5%)
   // Weights: ordinary=100, special=20, ultra=2 → total=122 (roughly)
-  // We use: r<82 ordinary, r<98 special, else ultra
+  // We use: r<820 ordinary, r<985 special, else ultra
   func pickModId(rarityTier : Nat, seed : Nat, salt : Nat) : (Nat, Text) {
     let r = rollRandom(seed, salt + 1000);
     switch (rarityTier) {
       case 1 { // Common
-        if      (r < 82) { (pickModFromPool(commonOrdinary, seed + salt), "ordinary") }
-        else if (r < 98) { (pickModFromPool(commonSpecial,  seed + salt), "special") }
+        if      (r < 820) { (pickModFromPool(commonOrdinary, seed + salt), "ordinary") }
+        else if (r < 985) { (pickModFromPool(commonSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(commonUltra,    seed + salt), "ultra") }
       };
       case 2 { // Rare
-        if      (r < 82) { (pickModFromPool(rareOrdinary, seed + salt), "ordinary") }
-        else if (r < 98) { (pickModFromPool(rareSpecial,  seed + salt), "special") }
+        if      (r < 820) { (pickModFromPool(rareOrdinary, seed + salt), "ordinary") }
+        else if (r < 985) { (pickModFromPool(rareSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(rareUltra,    seed + salt), "ultra") }
       };
       case 3 { // Legendary
-        if      (r < 82) { (pickModFromPool(legendaryOrdinary, seed + salt), "ordinary") }
-        else if (r < 98) { (pickModFromPool(legendarySpecial,  seed + salt), "special") }
+        if      (r < 820) { (pickModFromPool(legendaryOrdinary, seed + salt), "ordinary") }
+        else if (r < 985) { (pickModFromPool(legendarySpecial,  seed + salt), "special") }
         else             { (pickModFromPool(legendaryUltra,    seed + salt), "ultra") }
       };
       case _ { // Mythic
-        if      (r < 82) { (pickModFromPool(mythicOrdinary, seed + salt), "ordinary") }
-        else if (r < 98) { (pickModFromPool(mythicSpecial,  seed + salt), "special") }
+        if      (r < 820) { (pickModFromPool(mythicOrdinary, seed + salt), "ordinary") }
+        else if (r < 985) { (pickModFromPool(mythicSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(mythicUltra,    seed + salt), "ultra") }
       };
     }
