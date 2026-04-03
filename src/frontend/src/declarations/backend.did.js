@@ -88,12 +88,6 @@ export const DiscoverCacheResult = IDL.Variant({
   }),
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
-export const Modification = IDL.Record({
-  'model_url' : IDL.Text,
-  'mod_id' : IDL.Nat,
-  'rarity_tier' : IDL.Nat,
-  'multiplier_value' : IDL.Float64,
-});
 export const TopLandEntry = IDL.Record({
   'upgradeLevel' : IDL.Nat,
   'principal' : IDL.Principal,
@@ -101,24 +95,6 @@ export const TopLandEntry = IDL.Record({
   'plotName' : IDL.Text,
   'biome' : IDL.Text,
   'landId' : IDL.Nat,
-});
-export const http_header = IDL.Record({
-  'value' : IDL.Text,
-  'name' : IDL.Text,
-});
-export const http_request_result = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
-});
-export const TransformationInput = IDL.Record({
-  'context' : IDL.Vec(IDL.Nat8),
-  'response' : http_request_result,
-});
-export const TransformationOutput = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
 });
 export const UpgradeResult = IDL.Variant({
   'maxLevelReached' : IDL.Null,
@@ -128,7 +104,6 @@ export const UpgradeResult = IDL.Variant({
     'current' : IDL.Nat,
   }),
 });
-
 
 export const CrystalKind = IDL.Variant({ 'Burnite': IDL.Null, 'Synthex': IDL.Null, 'Cryonix': IDL.Null });
 export const CrystalTier = IDL.Variant({ 'T1': IDL.Null, 'T2': IDL.Null });
@@ -145,12 +120,19 @@ export const CacheDropItem = IDL.Variant({
 });
 export const CacheOpenResult = IDL.Record({ 'items': IDL.Vec(CacheDropItem), 'energySpent': IDL.Nat });
 export const FullInventory = IDL.Record({ 'crystals': IDL.Vec(CrystalItem), 'boosters': IDL.Vec(BoosterItem), 'keeperHearts': IDL.Vec(KeeperHeartItem) });
+
+export const ItemType = IDL.Variant({ 'Land': IDL.Null, 'Modifier': IDL.Null });
+export const Listing = IDL.Record({
+  'listingId': IDL.Nat,
+  'itemId': IDL.Nat,
+  'itemType': ItemType,
+  'seller': IDL.Principal,
+  'price': IDL.Nat,
+  'isActive': IDL.Bool,
+});
+
 export const idlService = IDL.Service({
-  'adminGetLandData' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Opt(IDL.Vec(LandData))],
-      ['query'],
-    ),
+  'adminGetLandData' : IDL.Func([IDL.Principal], [IDL.Opt(IDL.Vec(LandData))], ['query']),
   'adminSetAllModifiers' : IDL.Func([IDL.Vec(Modifier)], [], []),
   'applyModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -158,51 +140,57 @@ export const idlService = IDL.Service({
   'discoverLootCache' : IDL.Func([IDL.Nat], [DiscoverCacheResult], []),
   'getAllLandsPublic' : IDL.Func([], [IDL.Vec(PublicLandInfo)], ['query']),
   'getAllModifiers' : IDL.Func([], [IDL.Vec(Modifier)], ['query']),
-  'getAssetCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getCurrentCbrBalance' : IDL.Func([], [IDL.Nat], ['query']),
-  'getHighestRarityModification' : IDL.Func(
-      [],
-      [IDL.Opt(Modification)],
-      ['query'],
-    ),
-  'getLandCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
   'getLandData' : IDL.Func([], [IDL.Vec(LandData)], []),
   'getLandDataById' : IDL.Func([IDL.Nat], [IDL.Opt(LandData)], ['query']),
   'getLandDataQuery' : IDL.Func([], [IDL.Opt(IDL.Vec(LandData))], ['query']),
-  'getLandOwner' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], []),
+  'getLandOwner' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
   'getModifierById' : IDL.Func([IDL.Nat], [IDL.Opt(Modifier)], ['query']),
   'getModifiersByTier' : IDL.Func([IDL.Nat], [IDL.Vec(Modifier)], ['query']),
   'getMyLootCaches' : IDL.Func([], [IDL.Vec(LootCache)], ['query']),
-  'getMyModifications' : IDL.Func([], [IDL.Vec(Modification)], ['query']),
   'getMyModifierInventory' : IDL.Func([], [IDL.Vec(ModifierInstance)], ['query']),
   'getTopLands' : IDL.Func([IDL.Nat], [IDL.Vec(TopLandEntry)], ['query']),
-  'getUserProfile' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Opt(UserProfile)],
-      ['query'],
-    ),
   'initializeAccessControl' : IDL.Func([], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'mintLand' : IDL.Func([], [LandData], []),
   'processCache' : IDL.Func([IDL.Nat], [ModifierInstance], []),
+  'openCache' : IDL.Func([IDL.Nat], [CacheOpenResult], []),
+  'useBooster' : IDL.Func([BoosterKind], [], []),
+  'getFullInventory' : IDL.Func([], [FullInventory], ['query']),
   'removeModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setGovernanceCanister' : IDL.Func([IDL.Principal], [], []),
   'setMarketplaceCanister' : IDL.Func([IDL.Principal], [], []),
   'setTokenCanister' : IDL.Func([IDL.Principal], [], []),
   'transferLand' : IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
   'transferModifier' : IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Bool], []),
-  'transform' : IDL.Func(
-      [TransformationInput],
-      [TransformationOutput],
-      ['query'],
-    ),
-  'updateDecoration' : IDL.Func([IDL.Nat, IDL.Text], [], []),
-  'updatePlotName' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'upgradePlot' : IDL.Func([IDL.Nat, IDL.Nat], [UpgradeResult], []),
-  'useConsumableBuff' : IDL.Func([IDL.Nat], [], []),
+  // Built-in marketplace
+  'list_item' : IDL.Func([IDL.Nat, ItemType, IDL.Nat], [IDL.Nat], []),
+  'buy_item' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'cancelListing' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'getAllActiveListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
+  'getUserListings' : IDL.Func([IDL.Principal], [IDL.Vec(Listing)], ['query']),
+  'getActiveListing' : IDL.Func([IDL.Nat], [IDL.Opt(Listing)], ['query']),
+  // Governance
+  'gStakeTokens' : IDL.Func([IDL.Nat], [IDL.Variant({ 'success': IDL.Record({ 'newStake': IDL.Nat }), 'insufficientTokens': IDL.Record({ 'required': IDL.Nat, 'available': IDL.Nat }), 'transferFailed': IDL.Text })], []),
+  'gUnstakeTokens' : IDL.Func([IDL.Nat], [], []),
+  'gClaimVestedRewards' : IDL.Func([], [IDL.Nat], []),
+  'gGetMyStakeInfo' : IDL.Func([], [IDL.Record({ 'stake': IDL.Nat, 'lockEndsAt': Time, 'weight': IDL.Nat, 'unclaimedRewards': IDL.Nat, 'claimableVest': IDL.Nat, 'pendingVest': IDL.Nat })], ['query']),
+  'gGetStakedBalance' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
+  'gGetTotalWeightedStake' : IDL.Func([], [IDL.Nat], ['query']),
+  'gReceiveIncome' : IDL.Func([IDL.Nat], [], []),
+  'gGetTreasuryBalance' : IDL.Func([], [IDL.Nat], ['query']),
+  'gGetDeveloperFund' : IDL.Func([], [IDL.Nat], ['query']),
+  'gGetInsuranceReserve' : IDL.Func([], [IDL.Nat], ['query']),
+  'gCreateProposal' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
+  'gVote' : IDL.Func([IDL.Nat, IDL.Bool], [IDL.Variant({ 'success': IDL.Record({ 'weight': IDL.Nat }), 'proposalNotFound': IDL.Null, 'proposalNotActive': IDL.Null, 'alreadyVoted': IDL.Null, 'notStaker': IDL.Null })], []),
+  'gGetAllProposals' : IDL.Func([], [IDL.Vec(IDL.Record({ 'id': IDL.Nat, 'title': IDL.Text, 'description': IDL.Text, 'category': IDL.Text, 'proposer': IDL.Principal, 'createdAt': Time, 'votesYes': IDL.Nat, 'votesNo': IDL.Nat, 'isActive': IDL.Bool }))], ['query']),
+  'gGetActiveProposals' : IDL.Func([], [IDL.Vec(IDL.Record({ 'id': IDL.Nat, 'title': IDL.Text, 'description': IDL.Text, 'category': IDL.Text, 'proposer': IDL.Principal, 'createdAt': Time, 'votesYes': IDL.Nat, 'votesNo': IDL.Nat, 'isActive': IDL.Bool }))], ['query']),
+  'gGetMyVotes' : IDL.Func([], [IDL.Vec(IDL.Record({ 'proposalId': IDL.Nat, 'choice': IDL.Bool, 'weight': IDL.Nat }))], ['query']),
+  'gGetLeaderboard' : IDL.Func([IDL.Nat], [IDL.Vec(IDL.Record({ 'principal': IDL.Principal, 'stake': IDL.Nat, 'weight': IDL.Nat, 'topBiome': IDL.Text, 'maxMods': IDL.Nat, 'unclaimedRewards': IDL.Nat }))], ['query']),
+  'gCalcWeight' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
+  'gAdminCloseProposal' : IDL.Func([IDL.Nat], [], []),
+  'gAdminWithdrawTreasury' : IDL.Func([IDL.Nat], [], []),
 });
 
 export const idlInitArgs = [];
@@ -284,13 +272,6 @@ export const idlFactory = ({ IDL }) => {
       'current' : IDL.Int,
     }),
   });
-  const UserProfile = IDL.Record({ 'name' : IDL.Text });
-  const Modification = IDL.Record({
-    'model_url' : IDL.Text,
-    'mod_id' : IDL.Nat,
-    'rarity_tier' : IDL.Nat,
-    'multiplier_value' : IDL.Float64,
-  });
   const TopLandEntry = IDL.Record({
     'upgradeLevel' : IDL.Nat,
     'principal' : IDL.Principal,
@@ -298,21 +279,6 @@ export const idlFactory = ({ IDL }) => {
     'plotName' : IDL.Text,
     'biome' : IDL.Text,
     'landId' : IDL.Nat,
-  });
-  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
-  const http_request_result = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
-  });
-  const TransformationInput = IDL.Record({
-    'context' : IDL.Vec(IDL.Nat8),
-    'response' : http_request_result,
-  });
-  const TransformationOutput = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
   });
   const UpgradeResult = IDL.Variant({
     'maxLevelReached' : IDL.Null,
@@ -325,13 +291,33 @@ export const idlFactory = ({ IDL }) => {
       'current' : IDL.Nat,
     }),
   });
+  const CrystalKind = IDL.Variant({ 'Burnite': IDL.Null, 'Synthex': IDL.Null, 'Cryonix': IDL.Null });
+  const CrystalTier = IDL.Variant({ 'T1': IDL.Null, 'T2': IDL.Null });
+  const CrystalItem = IDL.Record({ 'kind': CrystalKind, 'tier': CrystalTier, 'quantity': IDL.Nat });
+  const BoosterKind = IDL.Variant({ 'B250': IDL.Null, 'B500': IDL.Null, 'B1000': IDL.Null });
+  const BoosterItem = IDL.Record({ 'kind': BoosterKind, 'quantity': IDL.Nat });
+  const KeeperHeartItem = IDL.Record({ 'biome': IDL.Text });
+  const CacheDropMod = IDL.Record({ 'modId': IDL.Nat, 'rarityTier': IDL.Nat, 'subtype': IDL.Text, 'instanceId': IDL.Nat });
+  const CacheDropItem = IDL.Variant({
+    'mod': CacheDropMod,
+    'crystal': CrystalItem,
+    'booster': BoosterItem,
+    'keeperHeart': KeeperHeartItem,
+  });
+  const CacheOpenResult = IDL.Record({ 'items': IDL.Vec(CacheDropItem), 'energySpent': IDL.Nat });
+  const FullInventory = IDL.Record({ 'crystals': IDL.Vec(CrystalItem), 'boosters': IDL.Vec(BoosterItem), 'keeperHearts': IDL.Vec(KeeperHeartItem) });
+  const ItemType = IDL.Variant({ 'Land': IDL.Null, 'Modifier': IDL.Null });
+  const Listing = IDL.Record({
+    'listingId': IDL.Nat,
+    'itemId': IDL.Nat,
+    'itemType': ItemType,
+    'seller': IDL.Principal,
+    'price': IDL.Nat,
+    'isActive': IDL.Bool,
+  });
   
   return IDL.Service({
-    'adminGetLandData' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(IDL.Vec(LandData))],
-        ['query'],
-      ),
+    'adminGetLandData' : IDL.Func([IDL.Principal], [IDL.Opt(IDL.Vec(LandData))], ['query']),
     'adminSetAllModifiers' : IDL.Func([IDL.Vec(Modifier)], [], []),
     'applyModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -339,31 +325,16 @@ export const idlFactory = ({ IDL }) => {
     'discoverLootCache' : IDL.Func([IDL.Nat], [DiscoverCacheResult], []),
     'getAllLandsPublic' : IDL.Func([], [IDL.Vec(PublicLandInfo)], ['query']),
     'getAllModifiers' : IDL.Func([], [IDL.Vec(Modifier)], ['query']),
-    'getAssetCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getCurrentCbrBalance' : IDL.Func([], [IDL.Nat], ['query']),
-    'getHighestRarityModification' : IDL.Func(
-        [],
-        [IDL.Opt(Modification)],
-        ['query'],
-      ),
-    'getLandCanisterCycleBalance' : IDL.Func([], [IDL.Text], []),
     'getLandData' : IDL.Func([], [IDL.Vec(LandData)], []),
     'getLandDataById' : IDL.Func([IDL.Nat], [IDL.Opt(LandData)], ['query']),
     'getLandDataQuery' : IDL.Func([], [IDL.Opt(IDL.Vec(LandData))], ['query']),
-    'getLandOwner' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], []),
+    'getLandOwner' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
     'getModifierById' : IDL.Func([IDL.Nat], [IDL.Opt(Modifier)], ['query']),
     'getModifiersByTier' : IDL.Func([IDL.Nat], [IDL.Vec(Modifier)], ['query']),
     'getMyLootCaches' : IDL.Func([], [IDL.Vec(LootCache)], ['query']),
-    'getMyModifications' : IDL.Func([], [IDL.Vec(Modification)], ['query']),
     'getMyModifierInventory' : IDL.Func([], [IDL.Vec(ModifierInstance)], ['query']),
     'getTopLands' : IDL.Func([IDL.Nat], [IDL.Vec(TopLandEntry)], ['query']),
-    'getUserProfile' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(UserProfile)],
-        ['query'],
-      ),
     'initializeAccessControl' : IDL.Func([], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'mintLand' : IDL.Func([], [LandData], []),
@@ -371,23 +342,38 @@ export const idlFactory = ({ IDL }) => {
     'openCache' : IDL.Func([IDL.Nat], [CacheOpenResult], []),
     'useBooster' : IDL.Func([BoosterKind], [], []),
     'getFullInventory' : IDL.Func([], [FullInventory], ['query']),
-
     'removeModifier' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setGovernanceCanister' : IDL.Func([IDL.Principal], [], []),
     'setMarketplaceCanister' : IDL.Func([IDL.Principal], [], []),
     'setTokenCanister' : IDL.Func([IDL.Principal], [], []),
     'transferLand' : IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
     'transferModifier' : IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Bool], []),
-    'transform' : IDL.Func(
-        [TransformationInput],
-        [TransformationOutput],
-        ['query'],
-      ),
-    'updateDecoration' : IDL.Func([IDL.Nat, IDL.Text], [], []),
-    'updatePlotName' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'upgradePlot' : IDL.Func([IDL.Nat, IDL.Nat], [UpgradeResult], []),
-    'useConsumableBuff' : IDL.Func([IDL.Nat], [], []),
+    'list_item' : IDL.Func([IDL.Nat, ItemType, IDL.Nat], [IDL.Nat], []),
+    'buy_item' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'cancelListing' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'getAllActiveListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
+    'getUserListings' : IDL.Func([IDL.Principal], [IDL.Vec(Listing)], ['query']),
+    'getActiveListing' : IDL.Func([IDL.Nat], [IDL.Opt(Listing)], ['query']),
+    'gStakeTokens' : IDL.Func([IDL.Nat], [IDL.Variant({ 'success': IDL.Record({ 'newStake': IDL.Nat }), 'insufficientTokens': IDL.Record({ 'required': IDL.Nat, 'available': IDL.Nat }), 'transferFailed': IDL.Text })], []),
+    'gUnstakeTokens' : IDL.Func([IDL.Nat], [], []),
+    'gClaimVestedRewards' : IDL.Func([], [IDL.Nat], []),
+    'gGetMyStakeInfo' : IDL.Func([], [IDL.Record({ 'stake': IDL.Nat, 'lockEndsAt': Time, 'weight': IDL.Nat, 'unclaimedRewards': IDL.Nat, 'claimableVest': IDL.Nat, 'pendingVest': IDL.Nat })], ['query']),
+    'gGetStakedBalance' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
+    'gGetTotalWeightedStake' : IDL.Func([], [IDL.Nat], ['query']),
+    'gReceiveIncome' : IDL.Func([IDL.Nat], [], []),
+    'gGetTreasuryBalance' : IDL.Func([], [IDL.Nat], ['query']),
+    'gGetDeveloperFund' : IDL.Func([], [IDL.Nat], ['query']),
+    'gGetInsuranceReserve' : IDL.Func([], [IDL.Nat], ['query']),
+    'gCreateProposal' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
+    'gVote' : IDL.Func([IDL.Nat, IDL.Bool], [IDL.Variant({ 'success': IDL.Record({ 'weight': IDL.Nat }), 'proposalNotFound': IDL.Null, 'proposalNotActive': IDL.Null, 'alreadyVoted': IDL.Null, 'notStaker': IDL.Null })], []),
+    'gGetAllProposals' : IDL.Func([], [IDL.Vec(IDL.Record({ 'id': IDL.Nat, 'title': IDL.Text, 'description': IDL.Text, 'category': IDL.Text, 'proposer': IDL.Principal, 'createdAt': Time, 'votesYes': IDL.Nat, 'votesNo': IDL.Nat, 'isActive': IDL.Bool }))], ['query']),
+    'gGetActiveProposals' : IDL.Func([], [IDL.Vec(IDL.Record({ 'id': IDL.Nat, 'title': IDL.Text, 'description': IDL.Text, 'category': IDL.Text, 'proposer': IDL.Principal, 'createdAt': Time, 'votesYes': IDL.Nat, 'votesNo': IDL.Nat, 'isActive': IDL.Bool }))], ['query']),
+    'gGetMyVotes' : IDL.Func([], [IDL.Vec(IDL.Record({ 'proposalId': IDL.Nat, 'choice': IDL.Bool, 'weight': IDL.Nat }))], ['query']),
+    'gGetLeaderboard' : IDL.Func([IDL.Nat], [IDL.Vec(IDL.Record({ 'principal': IDL.Principal, 'stake': IDL.Nat, 'weight': IDL.Nat, 'topBiome': IDL.Text, 'maxMods': IDL.Nat, 'unclaimedRewards': IDL.Nat }))], ['query']),
+    'gCalcWeight' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
+    'gAdminCloseProposal' : IDL.Func([IDL.Nat], [], []),
+    'gAdminWithdrawTreasury' : IDL.Func([IDL.Nat], [], []),
   });
 };
 

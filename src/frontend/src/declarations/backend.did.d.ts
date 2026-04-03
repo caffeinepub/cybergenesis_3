@@ -81,15 +81,6 @@ export interface TopLandEntry {
   'biome' : string,
   'landId' : bigint,
 }
-export interface TransformationInput {
-  'context' : Uint8Array,
-  'response' : http_request_result,
-}
-export interface TransformationOutput {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
-}
 export type UpgradeResult = { 'maxLevelReached' : null } |
   { 'success' : { 'newLevel' : bigint, 'remainingTokens' : bigint } } |
   { 'insufficientTokens' : { 'required' : bigint, 'current' : bigint } };
@@ -97,12 +88,6 @@ export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface http_header { 'value' : string, 'name' : string }
-export interface http_request_result {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
-}
 export type CrystalKind = { 'Burnite' : null } | { 'Synthex' : null } | { 'Cryonix' : null };
 export type CrystalTier = { 'T1' : null } | { 'T2' : null };
 export interface CrystalItem { 'kind' : CrystalKind, 'tier' : CrystalTier, 'quantity' : bigint }
@@ -117,6 +102,15 @@ export type CacheDropItem =
   { 'keeperHeart' : KeeperHeartItem };
 export interface CacheOpenResult { 'items' : Array<CacheDropItem>, 'energySpent' : bigint }
 export interface FullInventory { 'crystals' : Array<CrystalItem>, 'boosters' : Array<BoosterItem>, 'keeperHearts' : Array<KeeperHeartItem> }
+export type ItemType = { 'Land' : null } | { 'Modifier' : null };
+export interface Listing {
+  'listingId' : bigint,
+  'itemId' : bigint,
+  'itemType' : ItemType,
+  'seller' : Principal,
+  'price' : bigint,
+  'isActive' : boolean,
+}
 export interface _SERVICE {
   'adminGetLandData' : ActorMethod<[Principal], [] | [Array<LandData>]>,
   'adminSetAllModifiers' : ActorMethod<[Array<Modifier>], undefined>,
@@ -126,22 +120,16 @@ export interface _SERVICE {
   'discoverLootCache' : ActorMethod<[bigint], DiscoverCacheResult>,
   'getAllLandsPublic' : ActorMethod<[], Array<PublicLandInfo>>,
   'getAllModifiers' : ActorMethod<[], Array<Modifier>>,
-  'getAssetCanisterCycleBalance' : ActorMethod<[], string>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getCurrentCbrBalance' : ActorMethod<[], bigint>,
-  'getHighestRarityModification' : ActorMethod<[], [] | [Modification]>,
-  'getLandCanisterCycleBalance' : ActorMethod<[], string>,
   'getLandData' : ActorMethod<[], Array<LandData>>,
+  'getLandDataById' : ActorMethod<[bigint], [] | [LandData]>,
   'getLandDataQuery' : ActorMethod<[], [] | [Array<LandData>]>,
   'getLandOwner' : ActorMethod<[bigint], [] | [Principal]>,
   'getModifierById' : ActorMethod<[bigint], [] | [Modifier]>,
   'getModifiersByTier' : ActorMethod<[bigint], Array<Modifier>>,
   'getMyLootCaches' : ActorMethod<[], Array<LootCache>>,
-  'getMyModifications' : ActorMethod<[], Array<Modification>>,
   'getMyModifierInventory' : ActorMethod<[], Array<ModifierInstance>>,
   'getTopLands' : ActorMethod<[bigint], Array<TopLandEntry>>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'initializeAccessControl' : ActorMethod<[], undefined>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'mintLand' : ActorMethod<[], LandData>,
@@ -149,19 +137,40 @@ export interface _SERVICE {
   'openCache' : ActorMethod<[bigint], CacheOpenResult>,
   'useBooster' : ActorMethod<[BoosterKind], undefined>,
   'getFullInventory' : ActorMethod<[], FullInventory>,
-
   'removeModifier' : ActorMethod<[bigint, bigint], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setGovernanceCanister' : ActorMethod<[Principal], undefined>,
   'setMarketplaceCanister' : ActorMethod<[Principal], undefined>,
   'setTokenCanister' : ActorMethod<[Principal], undefined>,
   'transferLand' : ActorMethod<[Principal, bigint], boolean>,
   'transferModifier' : ActorMethod<[Principal, Principal, bigint], boolean>,
-  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
-  'updateDecoration' : ActorMethod<[bigint, string], undefined>,
-  'updatePlotName' : ActorMethod<[bigint, string], undefined>,
   'upgradePlot' : ActorMethod<[bigint, bigint], UpgradeResult>,
-  'useConsumableBuff' : ActorMethod<[bigint], undefined>,
+  // Built-in marketplace
+  'list_item' : ActorMethod<[bigint, ItemType, bigint], bigint>,
+  'buy_item' : ActorMethod<[bigint], boolean>,
+  'cancelListing' : ActorMethod<[bigint], boolean>,
+  'getAllActiveListings' : ActorMethod<[], Array<Listing>>,
+  'getUserListings' : ActorMethod<[Principal], Array<Listing>>,
+  'getActiveListing' : ActorMethod<[bigint], [] | [Listing]>,
+  // Governance
+  'gStakeTokens' : ActorMethod<[bigint], any>,
+  'gUnstakeTokens' : ActorMethod<[bigint], undefined>,
+  'gClaimVestedRewards' : ActorMethod<[], bigint>,
+  'gGetMyStakeInfo' : ActorMethod<[], any>,
+  'gGetStakedBalance' : ActorMethod<[Principal], bigint>,
+  'gGetTotalWeightedStake' : ActorMethod<[], bigint>,
+  'gReceiveIncome' : ActorMethod<[bigint], undefined>,
+  'gGetTreasuryBalance' : ActorMethod<[], bigint>,
+  'gGetDeveloperFund' : ActorMethod<[], bigint>,
+  'gGetInsuranceReserve' : ActorMethod<[], bigint>,
+  'gCreateProposal' : ActorMethod<[string, string, string], bigint>,
+  'gVote' : ActorMethod<[bigint, boolean], any>,
+  'gGetAllProposals' : ActorMethod<[], Array<any>>,
+  'gGetActiveProposals' : ActorMethod<[], Array<any>>,
+  'gGetMyVotes' : ActorMethod<[], Array<any>>,
+  'gGetLeaderboard' : ActorMethod<[bigint], Array<any>>,
+  'gCalcWeight' : ActorMethod<[Principal], bigint>,
+  'gAdminCloseProposal' : ActorMethod<[bigint], undefined>,
+  'gAdminWithdrawTreasury' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

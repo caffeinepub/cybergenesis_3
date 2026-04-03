@@ -406,14 +406,28 @@ export default function LandDashboard({
                 Staking Boost
               </p>
               <p className="text-white font-medium font-jetbrains">
-                {selectedLand.biome === "MYTHIC_VOID" ||
-                selectedLand.biome === "MYTHIC_AETHER"
-                  ? "×1.4"
-                  : selectedLand.biome === "SNOW_PEAK" ||
-                      selectedLand.biome === "DESERT_DUNE" ||
-                      selectedLand.biome === "VOLCANIC_CRAG"
-                    ? "×1.15"
-                    : "×1.0"}
+                {(() => {
+                  const biomeBP =
+                    selectedLand.biome === "MYTHIC_VOID" ||
+                    selectedLand.biome === "MYTHIC_AETHER"
+                      ? 140
+                      : selectedLand.biome === "SNOW_PEAK" ||
+                          selectedLand.biome === "DESERT_DUNE" ||
+                          selectedLand.biome === "VOLCANIC_CRAG"
+                        ? 115
+                        : 100;
+                  const modCount =
+                    selectedLand.attachedModifications?.length ?? 0;
+                  const hasKeeper =
+                    selectedLand.attachedModifications?.some(
+                      (m) => Number(m.rarity_tier) === 5,
+                    ) ?? false;
+                  const baseBP = 100 + Math.floor((modCount * 50) / 99);
+                  const keeperBP = hasKeeper ? 10 : 0;
+                  const modBP = baseBP + keeperBP;
+                  const finalMultiplier = (biomeBP * modBP) / 10000;
+                  return `×${finalMultiplier.toFixed(2)}`;
+                })()}
               </p>
             </div>
           </div>

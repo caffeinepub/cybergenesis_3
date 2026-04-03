@@ -190,6 +190,36 @@ export interface backendInterface {
     getModifierById(mod_id: bigint): Promise<Modifier | null>;
     getModifiersByTier(tier: bigint): Promise<Modifier[]>;
     assignCallerUserRole(user: Principal, role: string): Promise<void>;
+    openCache(cacheId: bigint): Promise<any>;
+    useBooster(kind: any): Promise<void>;
+    getFullInventory(): Promise<any>;
+    // Built-in marketplace
+    list_item(itemId: bigint, itemType: any, price: bigint): Promise<bigint>;
+    buy_item(listingId: bigint): Promise<boolean>;
+    cancelListing(listingId: bigint): Promise<boolean>;
+    getAllActiveListings(): Promise<any[]>;
+    getUserListings(user: Principal): Promise<any[]>;
+    getActiveListing(listingId: bigint): Promise<any | null>;
+    // Governance
+    gStakeTokens(amount: bigint): Promise<any>;
+    gUnstakeTokens(amount: bigint): Promise<void>;
+    gClaimVestedRewards(): Promise<bigint>;
+    gGetMyStakeInfo(): Promise<any>;
+    gGetStakedBalance(p: Principal): Promise<bigint>;
+    gGetTotalWeightedStake(): Promise<bigint>;
+    gReceiveIncome(amount: bigint): Promise<void>;
+    gGetTreasuryBalance(): Promise<bigint>;
+    gGetDeveloperFund(): Promise<bigint>;
+    gGetInsuranceReserve(): Promise<bigint>;
+    gCreateProposal(title: string, description: string, category: string): Promise<bigint>;
+    gVote(proposalId: bigint, choice: boolean): Promise<any>;
+    gGetAllProposals(): Promise<any[]>;
+    gGetActiveProposals(): Promise<any[]>;
+    gGetMyVotes(): Promise<any[]>;
+    gGetLeaderboard(limit: bigint): Promise<any[]>;
+    gCalcWeight(p: Principal): Promise<bigint>;
+    gAdminCloseProposal(proposalId: bigint): Promise<void>;
+    gAdminWithdrawTreasury(amount: bigint): Promise<void>;
 }
 
 function fromCandidOpt<T>(opt: [] | [T]): Option<T> {
@@ -308,6 +338,90 @@ export class Backend implements backendInterface {
     }
     async assignCallerUserRole(user: Principal, role: string): Promise<void> {
         await (this.actor as any).assignCallerUserRole(user, role);
+    }
+    async openCache(cacheId: bigint): Promise<any> {
+        return (this.actor as any).openCache(cacheId);
+    }
+    async useBooster(kind: any): Promise<void> {
+        await (this.actor as any).useBooster(kind);
+    }
+    async getFullInventory(): Promise<any> {
+        return (this.actor as any).getFullInventory();
+    }
+    async list_item(itemId: bigint, itemType: any, price: bigint): Promise<bigint> {
+        return (this.actor as any).list_item(itemId, itemType, price);
+    }
+    async buy_item(listingId: bigint): Promise<boolean> {
+        return (this.actor as any).buy_item(listingId);
+    }
+    async cancelListing(listingId: bigint): Promise<boolean> {
+        return (this.actor as any).cancelListing(listingId);
+    }
+    async getAllActiveListings(): Promise<any[]> {
+        return (this.actor as any).getAllActiveListings();
+    }
+    async getUserListings(user: Principal): Promise<any[]> {
+        return (this.actor as any).getUserListings(user);
+    }
+    async getActiveListing(listingId: bigint): Promise<any | null> {
+        return (this.actor as any).getActiveListing(listingId);
+    }
+    async gStakeTokens(amount: bigint): Promise<any> {
+        return (this.actor as any).gStakeTokens(amount);
+    }
+    async gUnstakeTokens(amount: bigint): Promise<void> {
+        await (this.actor as any).gUnstakeTokens(amount);
+    }
+    async gClaimVestedRewards(): Promise<bigint> {
+        return (this.actor as any).gClaimVestedRewards();
+    }
+    async gGetMyStakeInfo(): Promise<any> {
+        return (this.actor as any).gGetMyStakeInfo();
+    }
+    async gGetStakedBalance(p: Principal): Promise<bigint> {
+        return (this.actor as any).gGetStakedBalance(p);
+    }
+    async gGetTotalWeightedStake(): Promise<bigint> {
+        return (this.actor as any).gGetTotalWeightedStake();
+    }
+    async gReceiveIncome(amount: bigint): Promise<void> {
+        await (this.actor as any).gReceiveIncome(amount);
+    }
+    async gGetTreasuryBalance(): Promise<bigint> {
+        return (this.actor as any).gGetTreasuryBalance();
+    }
+    async gGetDeveloperFund(): Promise<bigint> {
+        return (this.actor as any).gGetDeveloperFund();
+    }
+    async gGetInsuranceReserve(): Promise<bigint> {
+        return (this.actor as any).gGetInsuranceReserve();
+    }
+    async gCreateProposal(title: string, description: string, category: string): Promise<bigint> {
+        return (this.actor as any).gCreateProposal(title, description, category);
+    }
+    async gVote(proposalId: bigint, choice: boolean): Promise<any> {
+        return (this.actor as any).gVote(proposalId, choice);
+    }
+    async gGetAllProposals(): Promise<any[]> {
+        return (this.actor as any).gGetAllProposals();
+    }
+    async gGetActiveProposals(): Promise<any[]> {
+        return (this.actor as any).gGetActiveProposals();
+    }
+    async gGetMyVotes(): Promise<any[]> {
+        return (this.actor as any).gGetMyVotes();
+    }
+    async gGetLeaderboard(limit: bigint): Promise<any[]> {
+        return (this.actor as any).gGetLeaderboard(limit);
+    }
+    async gCalcWeight(p: Principal): Promise<bigint> {
+        return (this.actor as any).gCalcWeight(p);
+    }
+    async gAdminCloseProposal(proposalId: bigint): Promise<void> {
+        await (this.actor as any).gAdminCloseProposal(proposalId);
+    }
+    async gAdminWithdrawTreasury(amount: bigint): Promise<void> {
+        await (this.actor as any).gAdminWithdrawTreasury(amount);
     }
 }
 export interface CreateActorOptions {

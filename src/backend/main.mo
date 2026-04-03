@@ -101,6 +101,7 @@ actor CyberGenesisLandMint {
   };
 
   public type LandToken = { token_id : Nat; rarity : Text };
+
   // ── Crystal, Booster & Cache Drop Types ──
 
   public type CrystalKind = { #Burnite; #Synthex; #Cryonix };
@@ -146,7 +147,20 @@ actor CyberGenesisLandMint {
     keeperHearts : [KeeperHeartItem];
   };
 
+  // ── Marketplace Types ──
 
+  public type ItemType = { #Land; #Modifier };
+
+  public type Listing = {
+    listingId : Nat;
+    itemId : Nat;
+    itemType : ItemType;
+    seller : Principal;
+    price : Nat;
+    isActive : Bool;
+  };
+
+  // ── State ──
 
   let landRegistry = Map.empty<Principal, [LandData]>();
   let lootCaches = Map.empty<Principal, [LootCache]>();
@@ -155,11 +169,12 @@ actor CyberGenesisLandMint {
   let playerCrystals = Map.empty<Principal, [CrystalItem]>();
   let playerBoosters = Map.empty<Principal, [BoosterItem]>();
   let playerKeeperHearts = Map.empty<Principal, [KeeperHeartItem]>();
-
+  let listings = Map.empty<Nat, Listing>();
 
   var nextCacheId : Nat = 0;
   var nextLandId : Nat = 0;
   var nextModifierInstanceId : Nat = 0;
+  var nextListingId : Nat = 0;
   let usedAutoMint = Map.empty<Principal, Bool>();
 
   var marketplaceCanister : ?Principal = null;
@@ -271,7 +286,7 @@ actor CyberGenesisLandMint {
           plotName = "My Plot";
           decorationURL = null;
           baseTokenMultiplier;
-          cycleCharge = 0;
+          cycleCharge = 600;   // Starter energy bonus for new users
           chargeCap = 1000;
           lastChargeUpdate = Time.now();
           landId = nextLandId;
@@ -459,7 +474,7 @@ actor CyberGenesisLandMint {
     };
   };
 
-  // ── Marketplace / Governance / Token Canister Config ──
+  // ── Canister Config ──
 
   public shared ({ caller }) func setMarketplaceCanister(marketplace : Principal) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
@@ -482,16 +497,9 @@ actor CyberGenesisLandMint {
     tokenCanister := ?token;
   };
 
-  // ── NFT Transfer ──
+  // ── NFT Transfer (legacy external, kept for compatibility) ──
 
-  public shared ({ caller }) func getLandOwner(landId : Nat) : async ?Principal {
-    let marketplace = switch (marketplaceCanister) {
-      case null { Runtime.trap("Marketplace canister not configured") };
-      case (?m) { m };
-    };
-    if (caller != marketplace) {
-      Runtime.trap("Unauthorized: Only the marketplace canister can query land ownership");
-    };
+  public query func getLandOwner(landId : Nat) : async ?Principal {
     for ((principal, lands) in landRegistry.entries()) {
       for (land in lands.vals()) {
         if (land.landId == landId) { return ?principal };
@@ -508,6 +516,23 @@ actor CyberGenesisLandMint {
     if (caller != marketplace) {
       Runtime.trap("Unauthorized: Only the marketplace canister can transfer land");
     };
+    transferLandInternal(to, landId)
+  };
+
+  public shared ({ caller }) func transferModifier(from : Principal, to : Principal, modifierInstanceId : Nat) : async Bool {
+    let marketplace = switch (marketplaceCanister) {
+      case null { Runtime.trap("Marketplace canister not configured") };
+      case (?m) { m };
+    };
+    if (caller != marketplace) {
+      Runtime.trap("Unauthorized: Only the marketplace canister can transfer modifiers");
+    };
+    transferModifierInternal(from, to, modifierInstanceId)
+  };
+
+  // ── Internal Transfer Helpers (used by built-in marketplace) ──
+
+  func transferLandInternal(to : Principal, landId : Nat) : Bool {
     for ((principal, lands) in landRegistry.entries()) {
       var landIndex : ?Nat = null;
       var i = 0;
@@ -533,15 +558,12 @@ actor CyberGenesisLandMint {
             case null { [] };
           };
           if (sellerRemaining.size() == 0) {
-            // One-time safety-net auto-mint: allowed only once per principal lifetime
-            // If already used → restore sold land and cancel transfer
             switch (usedAutoMint.get(principal)) {
               case (?_) {
                 landRegistry.add(principal, [lands[index]]);
                 return false;
               };
               case null {
-                // First time: grant Common-only auto-mint (Forest Valley or Island Archipelago)
                 let hash = hashPrincipal(principal) + nextLandId;
                 let coords = generateCoordinates(hash);
                 let safetyBiome = if (hash % 2 == 0) { "FOREST_VALLEY" } else { "ISLAND_ARCHIPELAGO" };
@@ -573,14 +595,7 @@ actor CyberGenesisLandMint {
     false;
   };
 
-  public shared ({ caller }) func transferModifier(from : Principal, to : Principal, modifierInstanceId : Nat) : async Bool {
-    let marketplace = switch (marketplaceCanister) {
-      case null { Runtime.trap("Marketplace canister not configured") };
-      case (?m) { m };
-    };
-    if (caller != marketplace) {
-      Runtime.trap("Unauthorized: Only the marketplace canister can transfer modifiers");
-    };
+  func transferModifierInternal(from : Principal, to : Principal, modifierInstanceId : Nat) : Bool {
     let fromInventory = switch (playerInventory.get(from)) {
       case (?inv) { inv };
       case null { return false };
@@ -608,6 +623,113 @@ actor CyberGenesisLandMint {
       };
     };
   };
+
+  // ── Built-in Marketplace ──
+
+  public shared ({ caller }) func list_item(itemId : Nat, itemType : ItemType, price : Nat) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    if (price == 0) { Runtime.trap("Price must be greater than zero") };
+    // Verify ownership
+    switch (itemType) {
+      case (#Land) {
+        var owns = false;
+        for (land in (switch (landRegistry.get(caller)) { case (?l) { l }; case null { [] } }).vals()) {
+          if (land.landId == itemId) { owns := true };
+        };
+        if (not owns) { Runtime.trap("You do not own this land") };
+      };
+      case (#Modifier) {
+        var owns = false;
+        for (mod in (switch (playerInventory.get(caller)) { case (?i) { i }; case null { [] } }).vals()) {
+          if (mod.modifierInstanceId == itemId) { owns := true };
+        };
+        if (not owns) { Runtime.trap("You do not own this modifier") };
+      };
+    };
+    let id = nextListingId;
+    nextListingId += 1;
+    let newListing : Listing = {
+      listingId = id;
+      itemId;
+      itemType;
+      seller = caller;
+      price;
+      isActive = true;
+    };
+    listings.add(id, newListing);
+    id
+  };
+
+  public shared ({ caller }) func buy_item(listingId : Nat) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let listing = switch (listings.get(listingId)) {
+      case null { Runtime.trap("Listing not found") };
+      case (?l) { l };
+    };
+    if (not listing.isActive) { Runtime.trap("Listing is not active") };
+    if (listing.seller == caller) { Runtime.trap("Cannot buy your own listing") };
+    // Deactivate listing
+    listings.add(listingId, { listing with isActive = false });
+    // Transfer item
+    switch (listing.itemType) {
+      case (#Land) {
+        let ok = transferLandInternal(caller, listing.itemId);
+        if (not ok) { Runtime.trap("Land transfer failed") };
+      };
+      case (#Modifier) {
+        let ok = transferModifierInternal(listing.seller, caller, listing.itemId);
+        if (not ok) { Runtime.trap("Modifier transfer failed") };
+      };
+    };
+    true
+  };
+
+  public shared ({ caller }) func cancelListing(listingId : Nat) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized");
+    };
+    let listing = switch (listings.get(listingId)) {
+      case null { Runtime.trap("Listing not found") };
+      case (?l) { l };
+    };
+    if (listing.seller != caller) { Runtime.trap("Only the seller can cancel") };
+    if (not listing.isActive) { Runtime.trap("Listing is already inactive") };
+    listings.add(listingId, { listing with isActive = false });
+    true
+  };
+
+  public query func getAllActiveListings() : async [Listing] {
+    var result : [Listing] = [];
+    for ((_id, listing) in listings.entries()) {
+      if (listing.isActive) {
+        result := ([result, [listing]]).flatten();
+      };
+    };
+    result
+  };
+
+  public query func getUserListings(user : Principal) : async [Listing] {
+    var result : [Listing] = [];
+    for ((_id, listing) in listings.entries()) {
+      if (listing.seller == user) {
+        result := ([result, [listing]]).flatten();
+      };
+    };
+    result
+  };
+
+  public query func getActiveListing(listingId : Nat) : async ?Listing {
+    switch (listings.get(listingId)) {
+      case null { null };
+      case (?l) { if (l.isActive) { ?l } else { null } };
+    }
+  };
+
+  // ── Admin Land Data ──
 
   public query ({ caller }) func adminGetLandData(user : Principal) : async ?[LandData] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
@@ -718,7 +840,6 @@ actor CyberGenesisLandMint {
           landRegistry.add(caller, updatedLands);
         };
         let randVal = nextModifierInstanceId % 100;
-        // Tier drops vary by cache tier: T1=Common only, T2=Common+Rare, T3=all tiers incl Mythic
         let tier = switch (cache.tier) {
           case 1 { if (randVal < 90) { 1 } else { 2 } };
           case 2 { if (randVal < 50) { 1 } else if (randVal < 90) { 2 } else { 3 } };
@@ -799,7 +920,6 @@ actor CyberGenesisLandMint {
             if (land.attachedModifications.size() >= 49) {
               Runtime.trap("Slot limit reached: maximum 49 modifiers per land");
             };
-            // Keeper biome check: rarity_tier 5 = Keeper, modifierType = keeper region
             let mod = userInventory[modIndex];
             if (mod.rarity_tier == 5 and mod.modifierType != land.biome) {
               Runtime.trap("Keeper biome mismatch: this Keeper belongs to " # mod.modifierType # " only");
@@ -1000,6 +1120,7 @@ actor CyberGenesisLandMint {
   var gTotalWeightedStake : Nat = 0;
   var gTreasuryBalance : Nat = 0;
   var gDeveloperFund : Nat = 0;
+  var gInsuranceReserve : Nat = 0;
 
   let G_REWARD_PRECISION : Nat = 1_000_000_000;
   let G_LOCK_PERIOD_NS : Int = 1_209_600_000_000_000;  // 14 days
@@ -1019,7 +1140,6 @@ actor CyberGenesisLandMint {
       case (?l) { l };
       case null { return stakeAmount };
     };
-    // Quality scoring via rarity_tier: tier3=Legendary(special), tier4=Mythic(ultra), tier5=Keeper
     var maxBiomeBP : Nat = 100;
     var maxMods : Nat = 0;
     var bestSpecialCount : Nat = 0;
@@ -1044,8 +1164,6 @@ actor CyberGenesisLandMint {
         hasKeeper := keeperFound;
       };
     };
-    // Base: +0.5% per mod (max ~24%), Keeper +10%
-    // Quality bonus: +0.5% per Legendary mod, +2% per Mythic mod (hidden)
     let baseBP : Nat = 100 + (maxMods * 50 / 99);
     let keeperBP : Nat = if (hasKeeper) { 10 } else { 0 };
     let specialBP : Nat = bestSpecialCount / 2;
@@ -1197,17 +1315,20 @@ actor CyberGenesisLandMint {
   public query func gGetTotalWeightedStake() : async Nat { gTotalWeightedStake };
 
   // ── Income Distribution ──
+  // 35% stakers / 20% treasury / 20% developer / 15% burn / 10% insurance
 
   public shared ({ caller }) func gReceiveIncome(amount : Nat) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can distribute income");
     };
-    let stakersShare = amount * 40 / 100;
-    let treasuryShare = amount * 25 / 100;
-    let developerShare = amount * 15 / 100;
-    // 20% is burned (not recorded)
-    gTreasuryBalance += treasuryShare;
-    gDeveloperFund += developerShare;
+    let stakersShare   = amount * 35 / 100;
+    let treasuryShare  = amount * 20 / 100;
+    let developerShare = amount * 20 / 100;
+    let insuranceShare = amount * 10 / 100;
+    // 15% is burned (not recorded)
+    gTreasuryBalance  += treasuryShare;
+    gDeveloperFund    += developerShare;
+    gInsuranceReserve += insuranceShare;
     if (gTotalWeightedStake > 0 and stakersShare > 0) {
       gRewardPerToken += stakersShare * G_REWARD_PRECISION / gTotalWeightedStake;
     };
@@ -1215,11 +1336,12 @@ actor CyberGenesisLandMint {
 
   public query func gGetTreasuryBalance() : async Nat { gTreasuryBalance };
   public query func gGetDeveloperFund() : async Nat { gDeveloperFund };
+  public query func gGetInsuranceReserve() : async Nat { gInsuranceReserve };
 
   // ── Proposals ──
 
   public shared ({ caller }) func gCreateProposal(title : Text, description : Text, category : Text) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized");
     };
     let entry = switch (governanceStakes.get(caller)) {
@@ -1364,7 +1486,6 @@ actor CyberGenesisLandMint {
     gTreasuryBalance := gTreasuryBalance - amount;
   };
 
-
   // ── Cache Drop Helpers ──
 
   func rollRandom(seed : Nat, salt : Nat) : Nat {
@@ -1391,28 +1512,25 @@ actor CyberGenesisLandMint {
     else { pool[seed % pool.size()] }
   };
 
-  // Subtype: 0..819 = ordinary (82%), 820..984 = special (16.5%), 985..999 = ultra (1.5%)
-  // Weights: ordinary=100, special=20, ultra=2 → total=122 (roughly)
-  // We use: r<820 ordinary, r<985 special, else ultra
   func pickModId(rarityTier : Nat, seed : Nat, salt : Nat) : (Nat, Text) {
     let r = rollRandom(seed, salt + 1000);
     switch (rarityTier) {
-      case 1 { // Common
+      case 1 {
         if      (r < 820) { (pickModFromPool(commonOrdinary, seed + salt), "ordinary") }
         else if (r < 985) { (pickModFromPool(commonSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(commonUltra,    seed + salt), "ultra") }
       };
-      case 2 { // Rare
+      case 2 {
         if      (r < 820) { (pickModFromPool(rareOrdinary, seed + salt), "ordinary") }
         else if (r < 985) { (pickModFromPool(rareSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(rareUltra,    seed + salt), "ultra") }
       };
-      case 3 { // Legendary
+      case 3 {
         if      (r < 820) { (pickModFromPool(legendaryOrdinary, seed + salt), "ordinary") }
         else if (r < 985) { (pickModFromPool(legendarySpecial,  seed + salt), "special") }
         else             { (pickModFromPool(legendaryUltra,    seed + salt), "ultra") }
       };
-      case _ { // Mythic
+      case _ {
         if      (r < 820) { (pickModFromPool(mythicOrdinary, seed + salt), "ordinary") }
         else if (r < 985) { (pickModFromPool(mythicSpecial,  seed + salt), "special") }
         else             { (pickModFromPool(mythicUltra,    seed + salt), "ultra") }
@@ -1423,18 +1541,18 @@ actor CyberGenesisLandMint {
   func getRarityTierForCacheTier(cacheTier : Nat, seed : Nat) : Nat {
     let r = rollRandom(seed, 7777);
     switch (cacheTier) {
-      case 1 { // Common cache: 94.8% Common, 5% Rare, 0.2% Legendary, 0% Mythic
+      case 1 {
         if      (r < 948) { 1 }
         else if (r < 998) { 2 }
         else              { 3 }
       };
-      case 2 { // Rare cache: 70% Common, 25% Rare, 4.8% Legendary, 0.2% Mythic
+      case 2 {
         if      (r < 700) { 1 }
         else if (r < 950) { 2 }
         else if (r < 998) { 3 }
         else              { 4 }
       };
-      case 3 { // Legendary cache: 38% Common, 45% Rare, 16.2% Legendary, 0.8% Mythic
+      case 3 {
         if      (r < 380) { 1 }
         else if (r < 830) { 2 }
         else if (r < 992) { 3 }
@@ -1447,7 +1565,7 @@ actor CyberGenesisLandMint {
   func getCrystalDrop(cacheTier : Nat, seed : Nat, salt : Nat) : CrystalItem {
     let r = rollRandom(seed, salt + 3333);
     switch (cacheTier) {
-      case 1 { // Common: Burnite T1=45%, Synthex T1=32%, Cryonix T1=20%, Burnite T2=2%, Synthex T2=0.7%, Cryonix T2=0.3%
+      case 1 {
         if      (r < 450) { { kind = #Burnite; tier = #T1; quantity = 1 } }
         else if (r < 770) { { kind = #Synthex; tier = #T1; quantity = 1 } }
         else if (r < 970) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
@@ -1455,7 +1573,7 @@ actor CyberGenesisLandMint {
         else if (r < 997) { { kind = #Synthex; tier = #T2; quantity = 1 } }
         else              { { kind = #Cryonix; tier = #T2; quantity = 1 } }
       };
-      case 2 { // Rare: Burnite T1=32%, Synthex T1=28%, Cryonix T1=25%, Burnite T2=8%, Synthex T2=5%, Cryonix T2=2%
+      case 2 {
         if      (r < 320) { { kind = #Burnite; tier = #T1; quantity = 1 } }
         else if (r < 600) { { kind = #Synthex; tier = #T1; quantity = 1 } }
         else if (r < 850) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
@@ -1463,7 +1581,7 @@ actor CyberGenesisLandMint {
         else if (r < 980) { { kind = #Synthex; tier = #T2; quantity = 1 } }
         else              { { kind = #Cryonix; tier = #T2; quantity = 1 } }
       };
-      case _ { // Legendary: Burnite T1=24%, Synthex T1=22%, Cryonix T1=28%, Burnite T2=14%, Synthex T2=9%, Cryonix T2=3%
+      case _ {
         if      (r < 240) { { kind = #Burnite; tier = #T1; quantity = 1 } }
         else if (r < 460) { { kind = #Synthex; tier = #T1; quantity = 1 } }
         else if (r < 740) { { kind = #Cryonix; tier = #T1; quantity = 1 } }
@@ -1477,17 +1595,17 @@ actor CyberGenesisLandMint {
   func getBoosterDrop(cacheTier : Nat, seed : Nat, salt : Nat) : BoosterItem {
     let r = rollRandom(seed, salt + 5555);
     switch (cacheTier) {
-      case 1 { // Common: +250=70%, +500=27%, +1000=3%
+      case 1 {
         if      (r < 700) { { kind = #B250; quantity = 1 } }
         else if (r < 970) { { kind = #B500; quantity = 1 } }
         else              { { kind = #B1000; quantity = 1 } }
       };
-      case 2 { // Rare: +250=50%, +500=40%, +1000=10%
+      case 2 {
         if      (r < 500) { { kind = #B250; quantity = 1 } }
         else if (r < 900) { { kind = #B500; quantity = 1 } }
         else              { { kind = #B1000; quantity = 1 } }
       };
-      case _ { // Legendary: +250=30%, +500=50%, +1000=20%
+      case _ {
         if      (r < 300) { { kind = #B250; quantity = 1 } }
         else if (r < 800) { { kind = #B500; quantity = 1 } }
         else              { { kind = #B1000; quantity = 1 } }
@@ -1559,7 +1677,6 @@ actor CyberGenesisLandMint {
     if (cache.owner != caller) { Runtime.trap("Unauthorized") };
     if (cache.is_opened) { Runtime.trap("Cache already opened") };
 
-    // Energy cost: tier 1=200, tier 2=400, tier 3=800
     let energyCost : Nat = switch (cache.tier) {
       case 1 { 200 }; case 2 { 400 }; case 3 { 800 }; case _ { 200 };
     };
@@ -1577,7 +1694,6 @@ actor CyberGenesisLandMint {
     });
     landRegistry.add(caller, updatedLands);
 
-    // Build random seed
     let baseSeed = (hashPrincipal(caller) + nextModifierInstanceId * 7919 + (Int.abs(Time.now()) % 999983)) % 999983;
 
     var items : [CacheDropItem] = [];
@@ -1646,7 +1762,6 @@ actor CyberGenesisLandMint {
       };
     };
 
-    // Mark cache as opened
     let updatedCaches = Array.tabulate(userCaches.size(), func(idx : Nat) : LootCache {
       if (idx == index) { { cache with is_opened = true } } else { userCaches[idx] }
     });
@@ -1698,6 +1813,5 @@ actor CyberGenesisLandMint {
       keeperHearts = switch (playerKeeperHearts.get(caller)) { case (?h) { h }; case null { [] } };
     }
   };
-
 
 };

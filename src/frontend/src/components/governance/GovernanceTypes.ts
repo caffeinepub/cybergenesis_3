@@ -15,7 +15,7 @@ export const formatCBR = (val: bigint): string =>
   (Number(val) / 100_000_000).toFixed(2);
 
 export const formatWeight = (val: bigint): string =>
-  (Number(val) / 100_000_000).toFixed(4);
+  (Number(val) / 100_000_000).toFixed(2);
 
 export const shortenPrincipal = (p: string): string => {
   if (p.length <= 14) return p;

@@ -14,7 +14,6 @@ import type {
 import { useActor } from "./useActor";
 import { useGovernanceActor } from "./useGovernanceActor";
 import { useInternetIdentity } from "./useInternetIdentity";
-import { useMarketplaceActor } from "./useMarketplaceActor";
 import { useTokenActor } from "./useTokenActor";
 
 // Local types for governance (re-exported for component use)
@@ -669,22 +668,28 @@ export function useGetTreasuryBalance() {
 // ─── Marketplace Hooks — wired to live marketplaceActor ─────────────────────
 
 export function useGetAllActiveListings() {
-  const { actor: marketplaceActor, isFetching: mpFetching } =
-    useMarketplaceActor();
+  const { actor, isFetching } = useActor();
 
   return useQuery<Listing[]>({
     queryKey: ["activeListings"],
     queryFn: async () => {
-      if (!marketplaceActor) {
+      if (!actor) {
         console.log("[Marketplace] Actor not ready, returning empty listings");
         return [];
       }
       console.log("[Marketplace] Fetching active listings...");
-      const result = await marketplaceActor.getAllActiveListings();
+      const result = await actor.getAllActiveListings();
       console.log("[Marketplace] Listings fetched:", result.length);
-      return result as Listing[];
+      return (result as any[]).map((l: any) => ({
+        listingId: l.listingId,
+        itemId: l.itemId,
+        itemType: "Land" in l.itemType ? ItemType.Land : ItemType.Modifier,
+        seller: l.seller,
+        price: l.price,
+        isActive: l.isActive,
+      })) as Listing[];
     },
-    enabled: !!marketplaceActor && !mpFetching,
+    enabled: !!actor && !isFetching,
     // PATH B: poll every 30s + refetch on focus for near-instant reactive updates
     refetchInterval: 30000,
     refetchOnWindowFocus: false,
@@ -694,7 +699,7 @@ export function useGetAllActiveListings() {
 }
 
 export function useListItem() {
-  const { actor: marketplaceActor } = useMarketplaceActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -703,11 +708,13 @@ export function useListItem() {
       itemType,
       price,
     }: { itemId: bigint; itemType: ItemType; price: bigint }) => {
-      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      if (!actor) throw new Error("Marketplace actor not available");
       console.log("[Marketplace] Listing item:", itemId, itemType, price);
-      const listingId = await marketplaceActor.list_item(
+      const candidItemType =
+        itemType === ItemType.Land ? { Land: null } : { Modifier: null };
+      const listingId = await actor.list_item(
         itemId,
-        itemType as any,
+        candidItemType as any,
         price,
       );
       return listingId;
@@ -725,15 +732,15 @@ export function useListItem() {
 }
 
 export function useBuyItem() {
-  const { actor: marketplaceActor } = useMarketplaceActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation<BuyResult, Error, bigint>({
     mutationFn: async (listingId: bigint) => {
-      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      if (!actor) throw new Error("Marketplace actor not available");
       console.log("[Marketplace] Buying listing:", listingId);
-      const result = await marketplaceActor.buy_item(listingId);
-      return result as BuyResult;
+      const result = await actor.buy_item(listingId);
+      return result as unknown as BuyResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });
@@ -752,14 +759,14 @@ export function useBuyItem() {
 }
 
 export function useCancelListing() {
-  const { actor: marketplaceActor } = useMarketplaceActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (listingId: bigint) => {
-      if (!marketplaceActor) throw new Error("Marketplace actor not available");
+      if (!actor) throw new Error("Marketplace actor not available");
       console.log("[Marketplace] Cancelling listing:", listingId);
-      await marketplaceActor.cancelListing(listingId);
+      await actor.cancelListing(listingId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activeListings"] });

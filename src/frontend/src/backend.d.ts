@@ -94,6 +94,17 @@ export type CacheDropItem =
 export interface CacheOpenResult { items: CacheDropItem[]; energySpent: bigint }
 export interface FullInventory { crystals: CrystalItem[]; boosters: BoosterItem[]; keeperHearts: KeeperHeartItem[] }
 
+// Marketplace types
+export type ItemType = { __kind__: "Land" } | { __kind__: "Modifier" };
+export interface Listing {
+  listingId: bigint;
+  itemId: bigint;
+  itemType: ItemType;
+  seller: Principal;
+  price: bigint;
+  isActive: boolean;
+}
+
 export interface backendInterface {
   getLandData(): Promise<LandData[]>;
   getLandDataQuery(): Promise<LandData[] | null>;
@@ -127,4 +138,31 @@ export interface backendInterface {
   openCache(cacheId: bigint): Promise<CacheOpenResult>;
   useBooster(kind: BoosterKind): Promise<void>;
   getFullInventory(): Promise<FullInventory>;
+  // Built-in marketplace
+  list_item(itemId: bigint, itemType: ItemType, price: bigint): Promise<bigint>;
+  buy_item(listingId: bigint): Promise<boolean>;
+  cancelListing(listingId: bigint): Promise<boolean>;
+  getAllActiveListings(): Promise<Listing[]>;
+  getUserListings(user: Principal): Promise<Listing[]>;
+  getActiveListing(listingId: bigint): Promise<Listing | null>;
+  // Governance
+  gStakeTokens(amount: bigint): Promise<{ __kind__: "success"; success: { newStake: bigint } } | { __kind__: "insufficientTokens" } | { __kind__: "transferFailed" }>;
+  gUnstakeTokens(amount: bigint): Promise<void>;
+  gClaimVestedRewards(): Promise<bigint>;
+  gGetMyStakeInfo(): Promise<{ stake: bigint; lockEndsAt: bigint; weight: bigint; unclaimedRewards: bigint; claimableVest: bigint; pendingVest: bigint }>;
+  gGetStakedBalance(p: Principal): Promise<bigint>;
+  gGetTotalWeightedStake(): Promise<bigint>;
+  gReceiveIncome(amount: bigint): Promise<void>;
+  gGetTreasuryBalance(): Promise<bigint>;
+  gGetDeveloperFund(): Promise<bigint>;
+  gGetInsuranceReserve(): Promise<bigint>;
+  gCreateProposal(title: string, description: string, category: string): Promise<bigint>;
+  gVote(proposalId: bigint, choice: boolean): Promise<{ __kind__: "success" } | { __kind__: "proposalNotFound" } | { __kind__: "proposalNotActive" } | { __kind__: "alreadyVoted" } | { __kind__: "notStaker" }>;
+  gGetAllProposals(): Promise<Array<{ id: bigint; title: string; description: string; category: string; proposer: Principal; createdAt: bigint; votesYes: bigint; votesNo: bigint; isActive: boolean }>>;
+  gGetActiveProposals(): Promise<Array<{ id: bigint; title: string; description: string; category: string; proposer: Principal; createdAt: bigint; votesYes: bigint; votesNo: bigint; isActive: boolean }>>;
+  gGetMyVotes(): Promise<Array<{ proposalId: bigint; choice: boolean; weight: bigint }>>;
+  gGetLeaderboard(limit: bigint): Promise<Array<{ principal: Principal; stake: bigint; weight: bigint; topBiome: string; maxMods: bigint; unclaimedRewards: bigint }>>;
+  gCalcWeight(p: Principal): Promise<bigint>;
+  gAdminCloseProposal(proposalId: bigint): Promise<void>;
+  gAdminWithdrawTreasury(amount: bigint): Promise<void>;
 }
